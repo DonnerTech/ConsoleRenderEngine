@@ -9,7 +9,8 @@
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
 #include "renderEngine.h" // custom askii renderer
-#include "vector.h"
+#include "vector2.h"
+#include "vector3.h"
 
 //int* entityIDs;
 

@@ -21,8 +21,13 @@
     <ClCompile Include="renderEngine.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="vector.h">
+    <ClCompile Include="vector2.h">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="vector3.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

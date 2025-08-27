@@ -8,6 +8,9 @@
 
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
+#include "vector2.h"
+#include "vector3.h"
+
 #define PI 3.14159
 #define TWO_PI 6.28318
 
@@ -127,6 +130,21 @@ void drawTriangleToArray(double x1, double y1, double x2, double y2, double x3, 
 			renderArray[i] = c;
 		}
 
+	}
+}
+
+char traceRay(int* pos, int* size, Vector3 position, Vector3 direction, double maxDistance)
+{
+
+}
+
+void fsRayTrace(int *pos, int *size)
+{
+	for (int i = 0; i < width * height; i++)
+	{
+		Vector3 rayDir;
+		Vector3 rayPos;
+		renderArray[i] = traceRay(pos, size, rayPos, rayDir, 100);
 	}
 }
 

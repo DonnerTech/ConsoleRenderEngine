@@ -125,7 +125,10 @@
   <ItemGroup>
     <ClCompile Include="main.c" />
     <ClCompile Include="renderEngine.h" />
-    <ClCompile Include="vector.h" />
+    <ClCompile Include="vector2.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="vector3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
