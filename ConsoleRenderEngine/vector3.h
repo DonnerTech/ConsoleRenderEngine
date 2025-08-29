@@ -9,4 +9,14 @@ typedef struct {
 
 } Vector3;
 
-#endif /* VECTOR_2 */
+Vector3 vector3_add(Vector3 a, Vector3 b);
+
+Vector3 vector3_subtract(Vector3 a, Vector3 b);
+
+double vector3_magnitude(Vector3 v);
+
+Vector3 vector3_scale(Vector3 v, double scalar);
+
+Vector3 vector3_normalize(Vector3 v);
+
+#endif /* VECTOR_3 */

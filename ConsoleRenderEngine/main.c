@@ -8,11 +8,14 @@
 
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
-#include "renderEngine.h" // custom askii renderer
-#include "vector2.h"
-#include "vector3.h"
+#include "renderEngine.h"
+
 
 //int* entityIDs;
+
+const int COUNT = 1;
+Vector3 positions[1];
+double sizes[1] = { 0.1};
 
 void draw(int tick)
 {
@@ -25,7 +28,7 @@ void draw(int tick)
 	Vector2 pos;
 	pos.x = (sin(tick / 200.0) + 1) / 8.0;
 	pos.y = 0.0;
-	double width = PI/4.0, length = 0.25 * pos.x;
+	double width = 3.141/4.0, length = 0.25 * pos.x;
 
 	polarToEuler(pos.x, pos.y + (tick / speed), &vecA.x, &vecA.y);
 	polarToEuler(pos.x + length, pos.y + (tick / speed) + width, &vecB.x, &vecB.y);
@@ -47,6 +50,10 @@ void draw(int tick)
 
 int main(void)
 {
+	positions[0].x = 0;
+	positions[0].y = 0;
+	positions[0].z = 10;
+
 	int code = init();
 	if (code != 0)
 	{
@@ -61,7 +68,9 @@ int main(void)
 		blank(); // clear screen
 
 		//update things
-		draw(tick);
+		//draw(tick);
+
+		fsRayTrace(positions,sizes, COUNT,60);
 
 		render(15,tick); //16 = 60fps, 32 = 30fps
 

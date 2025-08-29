@@ -18,16 +18,25 @@
     <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="renderEngine.h">
+    <ClCompile Include="vector2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="vector2.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vector3.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="renderEngine.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vector3.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="renderEngine.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -124,10 +124,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
-    <ClCompile Include="renderEngine.h" />
+    <ClCompile Include="renderEngine.c" />
+    <ClCompile Include="vector2.c" />
     <ClCompile Include="vector2.h" />
+    <ClCompile Include="vector3.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="renderEngine.h" />
     <ClInclude Include="vector3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
