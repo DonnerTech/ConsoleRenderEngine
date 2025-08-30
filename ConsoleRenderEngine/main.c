@@ -13,9 +13,9 @@
 
 //int* entityIDs;
 
-const int COUNT = 1;
-Vector3 positions[1];
-double sizes[1] = { 0.1};
+const int COUNT = 6;
+Vector3 spherePositions[6];
+double sphereSizes[6] = { 1.2, 0.8, 0.8, 0.2, 0.2, 0.15};
 
 void draw(int tick)
 {
@@ -50,9 +50,31 @@ void draw(int tick)
 
 int main(void)
 {
-	positions[0].x = 0;
-	positions[0].y = 0;
-	positions[0].z = 10;
+	renderer_unit_tests();
+
+	spherePositions[0].x = 0;
+	spherePositions[0].y = 0;
+	spherePositions[0].z = 4;
+
+	spherePositions[1].x = 6;
+	spherePositions[1].y = 0;
+	spherePositions[1].z = 5;
+
+	spherePositions[2].x = -2.5;
+	spherePositions[2].y = -1.5;
+	spherePositions[2].z = 2;
+
+	spherePositions[3].x = -0.5;
+	spherePositions[3].y = -0.1;
+	spherePositions[3].z = 4;
+
+	spherePositions[4].x = 0.45;
+	spherePositions[4].y = 0.6;
+	spherePositions[4].z = 0.8;
+
+	spherePositions[5].x = 0.05;
+	spherePositions[5].y = 0.55;
+	spherePositions[5].z = 0.8;
 
 	int code = init();
 	if (code != 0)
@@ -70,9 +92,12 @@ int main(void)
 		//update things
 		//draw(tick);
 
-		fsRayTrace(positions,sizes, COUNT,60);
+		spherePositions[0].x = sin(tick / 5.0) * 2;
+		spherePositions[0].z = 4 + cos(tick / 5.0) * 2;
 
-		render(15,tick); //16 = 60fps, 32 = 30fps
+		fsRayTrace(spherePositions, sphereSizes, COUNT, 60, 20);
+
+		render(100,tick); //16 = 60fps, 32 = 30fps
 
 		tick++;
 		// check if a key was pressed to exit the loop (not waiting)

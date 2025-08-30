@@ -19,7 +19,9 @@ void rotatingTriangleDemo(int tick);
 
 void drawTriangleToArray(double x1, double y1, double x2, double y2, double x3, double y3, char c);
 
-void fsRayTrace(Vector3* spheres, int* size, int count, double fov);
+void fsRayTrace(Vector3* spheres, double* size, int count, double fov, double maxDepth);
+
+void renderer_unit_tests();
 
 int init();
 

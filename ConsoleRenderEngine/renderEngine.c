@@ -124,46 +124,116 @@ void drawTriangleToArray(double x1, double y1, double x2, double y2, double x3, 
 	}
 }
 
-bool spherePointIntersectionTest(Vector3 pos, int size, Vector3 point)
+bool spherePointIntersectionTest(Vector3 pos, double size, Vector3 point)
 {
-	if (vector3_magnitude(vector3_subtract(pos, point)) < size)
-	{
-		return true;
-	}
-	return false;
+	Vector3 difference = vector3_subtract(pos, point);
+	double distance = vector3_magnitude(difference);
+
+	return distance < size;
 }
 
-char traceRay(Vector3* spheres, int* size, int count, Vector3 position, Vector3 direction, double maxDistance)
+Vector3 sphereNormal(Vector3 pos, Vector3 point)
+{
+	Vector3 difference = vector3_subtract(pos, point);
+	return vector3_normalize(difference);
+}
+
+const GROUND_HEIGHT = 2;
+bool groundIntersectionTest(Vector3 point)
+{
+	return point.y > GROUND_HEIGHT;
+}
+
+char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
 {
 	//return (int)(32 + abs((int)(direction.x + direction.y)));
 
 	Vector3 normalizedDirection = vector3_normalize(direction);
-	double presision = 0.1;
+	double stepSize = 0.0;
 
-	for (double i = 0; i < maxDistance; i+= presision)
+	Vector3 rayPos;
+	rayPos.x = position.x;
+	rayPos.y = position.y;
+	rayPos.z = position.z;
+
+	int reflection_count = 0;
+
+	for (double i = 0; i < maxDistance;)
 	{
-		position = vector3_add(position, vector3_scale(normalizedDirection, presision));
-
+		//raymarch distance calculation checked against the spheres and the ground
+		double minDist = maxDistance + 1;
 		for (int z = 0; z < count; z++)
 		{
-			if (spherePointIntersectionTest(spheres[z], size[z], position))
+			double distance = vector3_magnitude(vector3_subtract(spheres[z], rayPos)) - size[z];
+			if (distance < minDist)
 			{
-				return 'X';
+				minDist = distance;
 			}
 		}
+
+		double distance = fabs(GROUND_HEIGHT - rayPos.y);
+		if (distance < minDist)
+		{
+			minDist = distance;
+		}
+
+		stepSize = (minDist < 0.005) ? 0.005 : minDist;
+
+		rayPos = vector3_add(rayPos, vector3_scale(normalizedDirection, stepSize));
 		
+		// ground intersection test
+		if (groundIntersectionTest(rayPos))
+		{
+			if (reflection_count == 3)
+			{
+				return '.';
+			}
+			reflection_count++;
+
+			Vector3 up = {0, 1, 0};
+			normalizedDirection = vector3_reflect(normalizedDirection, up);
+		}
+
+		// sphere intersection tests
+		for (int z = 0; z < count; z++)
+		{
+			if (spherePointIntersectionTest(spheres[z], size[z], rayPos))
+			{
+				if (reflection_count == 3)
+				{
+					return '.';
+				}
+				reflection_count++;
+
+				normalizedDirection = vector3_reflect(normalizedDirection, sphereNormal(spheres[z], rayPos));
+
+			}
+		}
+
+		i += stepSize;
 	}
+
+	if (reflection_count > 2)
+	{
+		return '^';
+	}
+	if (reflection_count > 1)
+	{
+		return '*';
+	}
+	if (reflection_count > 0)
+		return '#';
 
 	return ' ';
 }
 
-void fsRayTrace(Vector3* spheres, int *size, int count, double fov)
+void fsRayTrace(Vector3* spheres, double *size, int count, double fov, double maxDepth)
 {
 	for (int i = 0; i < width * height; i++)
 	{
 		Vector3 rayDir;
-		rayDir.x = ((i % width)  - (width / 2.0))  * fov / width;
-		rayDir.y = ((i / height) - (height / 2.0)) * fov / height;
+		rayDir.x = (((i % width)  - (width / 2.0)) / width * 2) * fov/90 * ( (double)width / height);
+		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * fov/90 * ( (double)height / width);
 		rayDir.z = 1;
 		//Vector3 rayPos;
 
@@ -172,15 +242,37 @@ void fsRayTrace(Vector3* spheres, int *size, int count, double fov)
 		rayPos.y = 0;
 		rayPos.z = 0;
 
-		renderArray[i] = traceRay(spheres, size, count, rayPos, rayDir, 100);
+		renderArray[i] = traceRay(spheres, size, count, rayPos, rayDir, maxDepth);
 	}
+}
+
+void test_intersection_cases()
+{
+	Vector3 spherePos; // exactly 1 unit away from (0, 0, 0)
+	spherePos.x = 0;
+	spherePos.y = 0.6;
+	spherePos.z = 0.8;
+
+	Vector3 rayPos;
+	rayPos.x = 0;
+	rayPos.y = 0;
+	rayPos.z = 0;
+
+	printf("Test One (False): %d\n", spherePointIntersectionTest(spherePos, 0.1, rayPos));
+	printf("Test One (False): %d\n", spherePointIntersectionTest(spherePos, 0.99, rayPos));
+	printf("Test One (True) : %d\n", spherePointIntersectionTest(spherePos, 1.01, rayPos));
+}
+
+void renderer_unit_tests()
+{
+	test_intersection_cases();
 }
 
 int init()
 {
 
 	// get the users input
-	printf("Hello. \nEnter the canvas width: ");
+	printf("Hello I'm Rendy! An askii rendering engine. \nEnter the canvas width: ");
 	scanf("%d", &width);
 	printf("Enter the canvas height: ");
 	scanf("%d", &height);

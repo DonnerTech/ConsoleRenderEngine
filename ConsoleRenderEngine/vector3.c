@@ -1,4 +1,5 @@
 #include "Vector3.h"
+#include <math.h>
 
 Vector3 vector3_add(Vector3 a, Vector3 b) {
     Vector3 result = { a.x + b.x, a.y + b.y , a.z + b.z};
@@ -31,4 +32,15 @@ Vector3 vector3_normalize(Vector3 v) {
     else {
         return vector3_scale(v, 1.0f / mag);
     }
+}
+
+// Dot product of two vectors
+double vector3_dot(Vector3 a, Vector3 b) {
+    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+}
+
+Vector3 vector3_reflect(Vector3 ray, Vector3 normal)
+{
+    Vector3 result = vector3_subtract(ray, vector3_scale(normal,2 *vector3_dot(ray, normal)));
+    return result;
 }
