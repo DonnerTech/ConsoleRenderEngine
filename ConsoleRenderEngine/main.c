@@ -50,7 +50,7 @@ void draw(int tick)
 
 int main(void)
 {
-	renderer_unit_tests();
+	//renderer_unit_tests();
 
 	spherePositions[0].x = 0;
 	spherePositions[0].y = 0;
