@@ -5,6 +5,8 @@
 #define PI 3.14159
 #define TWO_PI 6.28318
 
+#define NUM_THREADS 64
+
 const double TRIANGLE_SIZE = 0.45;
 const double TRIANGLE_POS_X = 0;
 const double TRIANGLE_POS_Y = 0;
@@ -138,15 +140,61 @@ Vector3 sphereNormal(Vector3 pos, Vector3 point)
 	return vector3_normalize(difference);
 }
 
-const GROUND_HEIGHT = 2;
+const GROUND_HEIGHT = 1.5;
 bool groundIntersectionTest(Vector3 point)
 {
 	return point.y > GROUND_HEIGHT;
 }
 
-char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
+char traceShadow(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
 {
 	//return (int)(32 + abs((int)(direction.x + direction.y)));
+
+	Vector3 normalizedDirection = vector3_normalize( vector3_add(direction, vector3_random()));
+	double stepSize = 0.0;
+
+	Vector3 rayPos;
+	rayPos.x = position.x;
+	rayPos.y = position.y;
+	rayPos.z = position.z;
+
+	for (double i = 0; i < maxDistance;)
+	{
+		//raymarch distance calculation checked against the spheres and the ground
+		double minDist = maxDistance + 1;
+		for (int z = 0; z < count; z++)
+		{
+			double distance = vector3_magnitude(vector3_subtract(spheres[z], rayPos)) - size[z];
+			if (distance < minDist)
+			{
+				minDist = distance;
+			}
+		}
+
+		stepSize = (minDist < 0.001) ? 0.001 : minDist;
+
+		rayPos = vector3_add(rayPos, vector3_scale(normalizedDirection, stepSize));
+
+		// sphere intersection tests
+		for (int z = 0; z < count; z++)
+		{
+			if (spherePointIntersectionTest(spheres[z], size[z], rayPos))
+			{
+
+				return '.';
+			}
+		}
+
+		i += stepSize;
+	}
+
+	return '*';
+}
+
+char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
+{
+
+	double reflectiveness = 1000; // [0, infinity]
 
 	Vector3 normalizedDirection = vector3_normalize(direction);
 	double stepSize = 0.0;
@@ -177,7 +225,7 @@ char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 			minDist = distance;
 		}
 
-		stepSize = (minDist < 0.005) ? 0.005 : minDist;
+		stepSize = (minDist < 0.01) ? 0.01 : minDist;
 
 		rayPos = vector3_add(rayPos, vector3_scale(normalizedDirection, stepSize));
 		
@@ -190,8 +238,14 @@ char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 			}
 			reflection_count++;
 
+			rayPos = vector3_subtract(rayPos, vector3_scale(normalizedDirection, stepSize));
+
 			Vector3 up = {0, 1, 0};
 			normalizedDirection = vector3_reflect(normalizedDirection, up);
+
+			//normalizedDirection = vector3_normalize(vector3_add(vector3_reflect(normalizedDirection, up), vector3_random()));
+			
+			//return traceShadow(spheres,size,count,rayPos,normalizedDirection,i);
 		}
 
 		// sphere intersection tests
@@ -205,7 +259,11 @@ char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 				}
 				reflection_count++;
 
+				rayPos = vector3_subtract(rayPos, vector3_scale(normalizedDirection, stepSize));
 				normalizedDirection = vector3_reflect(normalizedDirection, sphereNormal(spheres[z], rayPos));
+				//Vector3 sphereNorm = sphereNormal(spheres[z], rayPos);
+				//double angle = fabs(vector3_angle(normalizedDirection, sphereNorm));
+				//normalizedDirection = vector3_normalize(vector3_add(vector3_reflect(vector3_scale(normalizedDirection, reflectiveness + angle * angle * angle), sphereNorm), vector3_random()));
 
 			}
 		}
@@ -246,6 +304,85 @@ void fsRayTrace(Vector3* spheres, double *size, int count, double fov, double ma
 	}
 }
 
+typedef struct {
+	Vector3* spheres;
+	double* size;
+	int count;
+	double fov;
+	double maxDepth;
+	int id;
+} RayGroupArgs;
+
+DWORD WINAPI rtWorker(LPVOID arg)
+{
+	RayGroupArgs* args = (RayGroupArgs*)arg;
+
+	int arrayLength = width * height;
+
+	int start = (arrayLength / NUM_THREADS) * args->id;
+	int end = (args->id == NUM_THREADS - 1) ? arrayLength : start + (arrayLength / NUM_THREADS);
+
+	for (int i = start; i < end; i++)
+	{
+		Vector3 rayDir;
+		rayDir.x = (((i % width) - (width / 2.0)) / width * 2) * args->fov / 90 * ((double)width / height);
+		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * args->fov / 90 * ((double)height / width);
+		rayDir.z = 1;
+		//Vector3 rayPos;
+
+		Vector3 rayPos;
+		rayPos.x = 0;
+		rayPos.y = 0;
+		rayPos.z = 0;
+
+		renderArray[i] = traceRay(args->spheres, args->size, args->count, rayPos, rayDir, args->maxDepth);
+	}
+
+	free(args); // free allocated memory after use
+	return 0;
+}
+
+int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fov, double maxDepth)
+{
+	HANDLE threads[NUM_THREADS];
+
+	// Launch threads
+	for (int i = 0; i < NUM_THREADS; i++) {
+		RayGroupArgs* args = malloc(sizeof(RayGroupArgs));
+		if (!args) return 1;
+
+		args->spheres = spheres;
+		args->size = size;
+		args->count = count;
+		args->fov = fov;
+		args->maxDepth = maxDepth;
+
+		args->id = i;
+
+		threads[i] = CreateThread(
+			NULL,       // default security
+			0,          // default stack size
+			rtWorker,     // thread function
+			args,        // argument
+			0,          // run immediately
+			NULL        // thread id not needed
+		);
+
+		if (threads[i] == NULL) {
+			fprintf(stderr, "Error creating thread %d\n", i);
+			return 1;
+		}
+	}
+
+	// Wait for threads
+	WaitForMultipleObjects(NUM_THREADS, threads, TRUE, INFINITE);
+
+	// Clean up handles
+	for (int i = 0; i < NUM_THREADS; i++) CloseHandle(threads[i]);
+
+	return 0;
+}
+
 void test_intersection_cases()
 {
 	Vector3 spherePos; // exactly 1 unit away from (0, 0, 0)
@@ -263,16 +400,38 @@ void test_intersection_cases()
 	printf("Test One (True) : %d\n", spherePointIntersectionTest(spherePos, 1.01, rayPos));
 }
 
+void test_vector3_random()
+{
+	srand(0);
+	Vector3 a = vector3_random();
+	printf("Vector3 random A: %f %f %f \n", a.x, a.y, a.z);
+	a = vector3_random();
+	printf("Vector3 random B: %f %f %f \n", a.x, a.y, a.z);
+	printf("Reset random \n");
+	srand(0);
+	a = vector3_random();
+	printf("Vector3 random A: %f %f %f \n", a.x, a.y, a.z);
+	a = vector3_random();
+	printf("Vector3 random B: %f %f %f \n", a.x, a.y, a.z);
+	printf("Seed Random \n");
+	int seed = time(clock());
+	srand(seed);
+	printf("Vector3 random %d: %f %f %f \n", seed, a.x, a.y, a.z);
+}
+
 void renderer_unit_tests()
 {
 	test_intersection_cases();
+	test_vector3_random();
 }
 
 int init()
 {
+	//852x480, 192x108, 160x90
 
 	// get the users input
-	printf("Hello I'm Rendy! An askii rendering engine. \nEnter the canvas width: ");
+	printf("Hello I'm Rendy! An askii rendering engine. Some reccomended dimentions are 852x480, 192x108, 160x90, and 80x45 \n");
+	printf("Enter the canvas width: ");
 	scanf("%d", &width);
 	printf("Enter the canvas height: ");
 	scanf("%d", &height);

@@ -50,7 +50,8 @@ void draw(int tick)
 
 int main(void)
 {
-	//renderer_unit_tests();
+	srand(time(clock()));
+	renderer_unit_tests();
 
 	spherePositions[0].x = 0;
 	spherePositions[0].y = 0;
@@ -92,17 +93,21 @@ int main(void)
 		//update things
 		//draw(tick);
 
-		spherePositions[0].x = sin(tick / 5.0) * 2;
-		spherePositions[0].z = 4 + cos(tick / 5.0) * 2;
+		spherePositions[0].x = sin(tick / 3.0) * 2;
+		spherePositions[0].z = 4 + cos(tick / 3.0) * 2;
 
-		fsRayTrace(spherePositions, sphereSizes, COUNT, 60, 20);
+		fsRayTraceMultithreaded(spherePositions, sphereSizes, COUNT, 90, 20);
 
-		render(100,tick); //16 = 60fps, 32 = 30fps
+		render(16,tick); //16 = 60fps, 32 = 30fps
 
 		tick++;
-		// check if a key was pressed to exit the loop (not waiting)
+
+		// check if the esc key was pressed exit the loop
 		if (_kbhit())
-			isRunning = false;
+		{
+			if(_getch() == 27)
+				isRunning = false;
+		}
 	}
 	end();
 

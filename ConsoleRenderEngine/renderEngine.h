@@ -7,6 +7,7 @@
 #include <stdlib.h> // memory allocation
 #include <math.h>
 #include <time.h>
+#include <Windows.h>
 
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
@@ -20,6 +21,8 @@ void rotatingTriangleDemo(int tick);
 void drawTriangleToArray(double x1, double y1, double x2, double y2, double x3, double y3, char c);
 
 void fsRayTrace(Vector3* spheres, double* size, int count, double fov, double maxDepth);
+
+int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fov, double maxDepth);
 
 void renderer_unit_tests();
 
