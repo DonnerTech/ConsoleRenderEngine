@@ -425,16 +425,31 @@ void renderer_unit_tests()
 	test_vector3_random();
 }
 
+char useStandardDimensions = ' ';
+
 int init()
 {
-	//852x480, 192x108, 160x90
 
 	// get the users input
-	printf("Hello I'm Rendy! An askii rendering engine. Some reccomended dimentions are 852x480, 192x108, 160x90, and 80x45 \n");
-	printf("Enter the canvas width: ");
-	scanf("%d", &width);
-	printf("Enter the canvas height: ");
-	scanf("%d", &height);
+	printf("Hello I'm Rendy! An askii rendering engine.\n");
+	printf("Would you like to use the standard dimenstions? (y/n): ");
+	scanf("%s", &useStandardDimensions);
+
+	if(useStandardDimensions == 'n' || useStandardDimensions == 'N')
+	{ 
+		printf("Some reccomended dimentions are 852x480, 192x108, 160x90, and 80x45\n");
+		printf("Enter the canvas width: ");
+		scanf("%d", &width);
+		printf("Enter the canvas height: ");
+		scanf("%d", &height);
+	}
+	else
+	{
+		width = 852;
+		height = 480;
+	}
+
+	//free(useStandardDimensions);
 
 	if (width <= 0 || height <= 0)
 	{
