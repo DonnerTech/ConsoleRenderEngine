@@ -5,11 +5,13 @@
 #define PI 3.14159
 #define TWO_PI 6.28318
 
-#define NUM_THREADS 64
+#define NUM_THREADS 32
 
 const double TRIANGLE_SIZE = 0.45;
 const double TRIANGLE_POS_X = 0;
 const double TRIANGLE_POS_Y = 0;
+
+const GROUND_HEIGHT = 1.5;
 
 int width, height;
 char* renderArray;
@@ -140,57 +142,56 @@ Vector3 sphereNormal(Vector3 pos, Vector3 point)
 	return vector3_normalize(difference);
 }
 
-const GROUND_HEIGHT = 1.5;
+
+
+double GetDistance(Vector3* spheres, double* size, int count, double maxDistance, Vector3 rayPos)
+{
+	double minDist = maxDistance + 1;
+	for (int z = 0; z < count; z++)
+	{
+		double distance = vector3_magnitude(vector3_subtract(spheres[z], rayPos)) - size[z];
+		if (distance < minDist)
+		{
+			minDist = distance;
+		}
+	}
+
+	double distance = fabs(GROUND_HEIGHT - rayPos.y);
+	if (distance < minDist)
+	{
+		minDist = distance;
+	}
+
+	minDist = smin(distance, minDist, 0.25);
+}
+
+//Vector3 GetNormal(Vector3 position, )
+//{
+//	float distance = GetDist(p);
+//	Vector2 epsilon = Vector2(.01, 0);
+//	Vector3 n = distance - vec3(
+//		GetDist(position - epsilon.xyy), //X Component
+//		GetDist(position - epsilon.yxy), //Y Component
+//		GetDist(position - epsilon.yyx)  //Z Component
+//	);
+//
+//	return normalize(n);
+//}
+
 bool groundIntersectionTest(Vector3 point)
 {
 	return point.y > GROUND_HEIGHT;
 }
 
-char traceShadow(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
+// sigmoid
+float smin(float a, float b, float k)
 {
-	//return (int)(32 + abs((int)(direction.x + direction.y)));
-
-	Vector3 normalizedDirection = vector3_normalize( vector3_add(direction, vector3_random()));
-	double stepSize = 0.0;
-
-	Vector3 rayPos;
-	rayPos.x = position.x;
-	rayPos.y = position.y;
-	rayPos.z = position.z;
-
-	for (double i = 0; i < maxDistance;)
-	{
-		//raymarch distance calculation checked against the spheres and the ground
-		double minDist = maxDistance + 1;
-		for (int z = 0; z < count; z++)
-		{
-			double distance = vector3_magnitude(vector3_subtract(spheres[z], rayPos)) - size[z];
-			if (distance < minDist)
-			{
-				minDist = distance;
-			}
-		}
-
-		stepSize = (minDist < 0.001) ? 0.001 : minDist;
-
-		rayPos = vector3_add(rayPos, vector3_scale(normalizedDirection, stepSize));
-
-		// sphere intersection tests
-		for (int z = 0; z < count; z++)
-		{
-			if (spherePointIntersectionTest(spheres[z], size[z], rayPos))
-			{
-
-				return '.';
-			}
-		}
-
-		i += stepSize;
-	}
-
-	return '*';
+	k *= log(2.0);
+	float x = b - a;
+	return a + x / (1.0 - exp2(x / k));
 }
 
+//TODO: Implement new smooth minimums code
 char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
 {
 
@@ -209,6 +210,9 @@ char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 	for (double i = 0; i < maxDistance;)
 	{
 		//raymarch distance calculation checked against the spheres and the ground
+
+		//double minDist = GetDistance(spheres, size, count, maxDistance, rayPos);
+
 		double minDist = maxDistance + 1;
 		for (int z = 0; z < count; z++)
 		{
@@ -219,7 +223,7 @@ char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 			}
 		}
 
-		double distance = fabs(GROUND_HEIGHT - rayPos.y);
+		double distance = GROUND_HEIGHT - rayPos.y;
 		if (distance < minDist)
 		{
 			minDist = distance;
@@ -244,8 +248,6 @@ char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 			normalizedDirection = vector3_reflect(normalizedDirection, up);
 
 			//normalizedDirection = vector3_normalize(vector3_add(vector3_reflect(normalizedDirection, up), vector3_random()));
-			
-			//return traceShadow(spheres,size,count,rayPos,normalizedDirection,i);
 		}
 
 		// sphere intersection tests
@@ -425,15 +427,15 @@ void renderer_unit_tests()
 	test_vector3_random();
 }
 
-char useStandardDimensions = ' ';
 
 int init()
 {
+	char useStandardDimensions = '\0';
 
 	// get the users input
 	printf("Hello I'm Rendy! An askii rendering engine.\n");
 	printf("Would you like to use the standard dimenstions? (y/n): ");
-	scanf("%s", &useStandardDimensions);
+	scanf("%c", &useStandardDimensions);
 
 	if(useStandardDimensions == 'n' || useStandardDimensions == 'N')
 	{ 
@@ -445,8 +447,8 @@ int init()
 	}
 	else
 	{
-		width = 852;
-		height = 480;
+		width = 192;
+		height = 108;
 	}
 
 	//free(useStandardDimensions);
@@ -456,9 +458,6 @@ int init()
 		printf("Invalid Dimensions\n");
 		return 1;
 	}
-
-	printf("Width: %d \n", width);
-	printf("Height: %d \n", height);
 
 	printf("Array memory size: %lld bytes \n", sizeof(renderArray) * width * height);
 
@@ -487,7 +486,10 @@ int init()
 
 void blank()
 {
+	deltaTime = executiontimeStart;
 	executiontimeStart = clock(); // mesure frame times
+
+	deltaTime = (double)(executiontimeStart - deltaTime); // find the time difference between every blank (A frame behind)
 
 	for (int i = 0; i < width * height; i++)
 	{
@@ -506,6 +508,8 @@ void render(double targetms,int tick)
 	double frameTime = targetms < time_elapsed ? time_elapsed : targetms;
 	printf("Frame time: %f milliseconds\n", frameTime);
 
+	printf("Delta time: %f miliseconds\n", deltaTime);
+		
 	if (time_elapsed < targetms)
 		_sleep(targetms - (int)time_elapsed); // 16ms per frame = 60 fps
 }

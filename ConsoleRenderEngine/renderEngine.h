@@ -14,6 +14,8 @@
 #include "vector2.h"
 #include "vector3.h"
 
+double deltaTime;
+
 void polarToEuler(double r, double theta, double* x, double* y);
 
 void rotatingTriangleDemo(int tick);

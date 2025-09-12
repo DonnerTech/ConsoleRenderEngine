@@ -51,7 +51,7 @@ void draw(int tick)
 int main(void)
 {
 	srand(time(clock()));
-	renderer_unit_tests();
+	//renderer_unit_tests();
 
 	spherePositions[0].x = 0;
 	spherePositions[0].y = 0;
@@ -85,6 +85,9 @@ int main(void)
 
 	bool isRunning = true;
 	int tick = 0;
+
+	double rot = 0;
+
 	// render loop
 	while (isRunning)
 	{
@@ -93,8 +96,9 @@ int main(void)
 		//update things
 		//draw(tick);
 
-		spherePositions[0].x = sin(tick / 3.0) * 2;
-		spherePositions[0].z = 4 + cos(tick / 3.0) * 2;
+		rot += deltaTime / 3000.0;
+		spherePositions[0].x = sin(rot) * 2;
+		spherePositions[0].z = 4 + cos(rot) * 2;
 
 		fsRayTraceMultithreaded(spherePositions, sphereSizes, COUNT, 90, 20);
 
