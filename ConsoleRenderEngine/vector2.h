@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VECTOR_2
-#define VECTOR_2
+#ifndef VECTOR2_H
+#define VECTOR2_H
 
 typedef struct {
     double x;

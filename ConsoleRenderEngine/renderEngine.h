@@ -1,6 +1,6 @@
 #pragma once
-#ifndef RENDER_ENGINE
-#define RENDER_ENGINE
+#ifndef RENDER_ENGINE_H
+#define RENDER_ENGINE_H
 
 #include <stdbool.h> // booleans
 #include <stdio.h> // I/O

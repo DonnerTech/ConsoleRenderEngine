@@ -136,6 +136,8 @@ bool spherePointIntersectionTest(Vector3 pos, double size, Vector3 point)
 	return distance < size;
 }
 
+//bool cubePointIntersectionTest(Vector3 pos, )
+
 Vector3 sphereNormal(Vector3 pos, Vector3 point)
 {
 	Vector3 difference = vector3_subtract(pos, point);

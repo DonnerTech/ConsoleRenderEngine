@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VECTOR_3
-#define VECTOR_3
+#ifndef VECTOR3_H
+#define VECTOR3_H
 
 #include <math.h>
 #include <stdlib.h>
@@ -30,6 +30,6 @@ double vector3_angle(Vector3 a, Vector3 b);
 
 Vector3 vector3_reflect(Vector3 ray, Vector3 normal);
 
-Vector3 vector3_random();
+Vector3 vector3_random(void);
 
 #endif /* VECTOR_3 */
