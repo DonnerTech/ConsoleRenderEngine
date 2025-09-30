@@ -45,9 +45,9 @@ typedef struct {
     double mass;
     double inv_mass;
 
-    Matrix3 inertiaBody;     // local-space inertia matrix3
-    Matrix3 inertiaBody_inv; // inverse inertia matrix3 in local space 
-    Matrix3 inertiaWorld_inv;// inverse inertia matrix3 in world space
+    Matrix3x3 inertiaBody;     // local-space inertia matrix3
+    Matrix3x3 inertiaBody_inv; // inverse inertia matrix3 in local space 
+    Matrix3x3 inertiaWorld_inv;// inverse inertia matrix3 in world space
 
     CollisionShape shape;
 

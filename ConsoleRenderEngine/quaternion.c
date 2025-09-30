@@ -137,9 +137,9 @@ Quaternion quat_integrate(Quaternion q, Vector3 omega, double dt)
 	return quat_normalize(result);
 }
 
-Matrix3 quat_to_matrix3(Quaternion q)
+Matrix3x3 quat_to_matrix3(Quaternion q)
 {
-	Matrix3 M;
+	Matrix3x3 M;
 
 	q = quat_normalize(q);
 

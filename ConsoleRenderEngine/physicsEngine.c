@@ -86,11 +86,11 @@ void update_inertia_tensor(RigidBody* body)
 	if (body->isStatic) return;
 
 	// Build rotation matrix from orientation quaternion
-	Matrix3 R = quat_to_matrix3(body->orientation);
+	Matrix3x3 R = quat_to_matrix3(body->orientation);
 
 	// I_world_inv = R * I_body_inv * R^T
-	Matrix3 Rt = matrix3x3_transpose(R);
-	Matrix3 temp = matrix3x3_mul(R, body->inertiaBody_inv);
+	Matrix3x3 Rt = matrix3x3_transpose(R);
+	Matrix3x3 temp = matrix3x3_mul(R, body->inertiaBody_inv);
 	body->inertiaWorld_inv = matrix3x3_mul(temp, Rt);
 }
 

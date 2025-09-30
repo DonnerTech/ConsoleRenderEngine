@@ -33,6 +33,6 @@ Quaternion quat_from_angular_velocity(Vector3 omega, double dt);
 Quaternion quat_integrate(Quaternion q, Vector3 omega, double dt);
 
 
-Matrix3 quat_to_matrix3(Quaternion q);
+Matrix3x3 quat_to_matrix3(Quaternion q);
 
 #endif // QUATERNION_H

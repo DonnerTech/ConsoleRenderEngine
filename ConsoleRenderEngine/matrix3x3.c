@@ -1,6 +1,6 @@
 #include "matrix3x3.h"
 
-Vector3 matrix3x3_mul_vector3(Vector3 a, Matrix3 M)
+Vector3 matrix3x3_mul_vector3(Vector3 a, Matrix3x3 M)
 {
     Vector3 result;
     result.x = M.m[0][0] * a.x + M.m[0][1] * a.y + M.m[0][2] * a.z;
@@ -9,9 +9,9 @@ Vector3 matrix3x3_mul_vector3(Vector3 a, Matrix3 M)
     return result;
 }
 
-Matrix3 matrix3x3_transpose(Matrix3 M)
+Matrix3x3 matrix3x3_transpose(Matrix3x3 M)
 {
-    Matrix3 transposed;
+    Matrix3x3 transposed;
 
     for (int i = 0; i < 3; i++)
     {
@@ -24,9 +24,9 @@ Matrix3 matrix3x3_transpose(Matrix3 M)
     return transposed;
 }
 
-Matrix3 matrix3x3_mul(Matrix3 M1, Matrix3 M2)
+Matrix3x3 matrix3x3_mul(Matrix3x3 M1, Matrix3x3 M2)
 {
-    Matrix3 mult;
+    Matrix3x3 mult;
 
     for (int i = 0; i < 3; i++)
     {
