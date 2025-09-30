@@ -4,6 +4,7 @@
 
 #include <math.h>
 #include "vector3.h"
+#include "matrix3x3.h"
 
 typedef struct {
     double w; // scalar part (w)
@@ -32,6 +33,6 @@ Quaternion quat_from_angular_velocity(Vector3 omega, double dt);
 Quaternion quat_integrate(Quaternion q, Vector3 omega, double dt);
 
 
-void quat_to_matrix(Quaternion q, double m[3][3]);
+Matrix3 quat_to_matrix3(Quaternion q);
 
 #endif // QUATERNION_H

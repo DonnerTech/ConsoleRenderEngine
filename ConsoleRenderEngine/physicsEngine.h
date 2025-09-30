@@ -4,13 +4,36 @@
 
 #include "quaternion.h"
 #include "vector3.h"
+#include "matrix3x3.h"
 #include <stdbool.h>
 
 typedef enum {
-    SHAPE_BOX,
     SHAPE_SPHERE,
+    SHAPE_BOX,
     SHAPE_PLANE
-} CollisionType;
+} ShapeType;
+
+typedef struct {
+    double radius;
+} SphereShape;
+
+typedef struct {
+    Vector3 half_extents; // half sizes (x,y,z)
+} BoxShape;
+
+typedef struct {
+    Vector3 normal; // unit vector
+    double offset;  // distance from origin along normal
+} PlaneShape;
+
+typedef struct {
+    ShapeType type;
+    union {
+        SphereShape sphere;
+        BoxShape box;
+        PlaneShape plane;
+    };
+} CollisionShape;
 
 typedef struct {
     Vector3 position;
@@ -22,17 +45,17 @@ typedef struct {
     double mass;
     double inv_mass;
 
-    double inertiaBody[3][3];     // local-space inertia matrix3
-    double inertiaBody_inv[3][3]; // inverse inertia matrix3 in local space 
-    double inertiaWorld_inv[3][3];// inverse inertia matrix3 in world space
+    Matrix3 inertiaBody;     // local-space inertia matrix3
+    Matrix3 inertiaBody_inv; // inverse inertia matrix3 in local space 
+    Matrix3 inertiaWorld_inv;// inverse inertia matrix3 in world space
 
-    CollisionType shapeType;
+    CollisionShape shape;
 
     bool isStatic; // 1 = static, 0 = dynamic
 } RigidBody;
 
 // Initialization
-RigidBody create_box(Vector3 pos, Vector3 half_extents, double mass);
+RigidBody create_box(Vector3 pos, Vector3 half_extents, Quaternion orientation, double mass);
 RigidBody create_sphere(Vector3 pos, double radius, double mass);
 RigidBody create_plane(Vector3 normal, double offset);
 
@@ -73,7 +96,7 @@ typedef struct {
 // Physics World Simulation
 void physicsWorld_Init(PhysicsWorld* physicsWorld, Vector3 gravity);
 
-void physicsWorld_AddBody(PhysicsWorld *physicsWorld, CollisionType type, Vector3 position, Quaternion rotation, Vector3 dimension);
+void physicsWorld_AddBody(PhysicsWorld *physicsWorld, ShapeType type, Vector3 position, Quaternion rotation, Vector3 dimension);
 
 void physicsWorld_Update(float dt);
 

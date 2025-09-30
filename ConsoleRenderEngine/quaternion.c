@@ -137,8 +137,10 @@ Quaternion quat_integrate(Quaternion q, Vector3 omega, double dt)
 	return quat_normalize(result);
 }
 
-void quat_to_matrix(Quaternion q, double m[3][3])
+Matrix3 quat_to_matrix3(Quaternion q)
 {
+	Matrix3 M;
+
 	q = quat_normalize(q);
 
 	double xx = q.x * q.x;
@@ -151,17 +153,19 @@ void quat_to_matrix(Quaternion q, double m[3][3])
 	double wy = q.w * q.y;
 	double wz = q.w * q.z;
 
-	m[0][0] = 1.0 - 2.0 * (yy + zz);
-	m[0][1] = 2.0 * (xy - wz);
-	m[0][2] = 2.0 * (xz + wy);
+	M.m[0][0] = 1.0 - 2.0 * (yy + zz);
+	M.m[0][1] = 2.0 * (xy - wz);
+	M.m[0][2] = 2.0 * (xz + wy);
 
-	m[1][0] = 2.0 * (xy + wz);
-	m[1][1] = 1.0 - 2.0 * (xx + zz);
-	m[1][2] = 2.0 * (yz - wx);
+	M.m[1][0] = 2.0 * (xy + wz);
+	M.m[1][1] = 1.0 - 2.0 * (xx + zz);
+	M.m[1][2] = 2.0 * (yz - wx);
 
-	m[2][0] = 2.0 * (xz - wy);
-	m[2][1] = 2.0 * (yz + wx);
-	m[2][2] = 1.0 - 2.0 * (xx + yy);
+	M.m[2][0] = 2.0 * (xz - wy);
+	M.m[2][1] = 2.0 * (yz + wx);
+	M.m[2][2] = 1.0 - 2.0 * (xx + yy);
+
+	return M;
 }
 
 

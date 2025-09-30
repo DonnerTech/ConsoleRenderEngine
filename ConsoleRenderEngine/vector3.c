@@ -38,6 +38,15 @@ double vector3_dot(Vector3 a, Vector3 b) {
     return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
 }
 
+Vector3 vector3_cross(Vector3 a, Vector3 b) {
+    Vector3 result;
+    result.x = a.y * b.z - a.z * b.y;
+    result.y = a.z * b.x - a.x * b.z;
+    result.z = a.x * b.y - a.y * b.x;
+    return result;
+}
+
+
 double vector3_angle(Vector3 a, Vector3 b)
 {
     double dot = vector3_dot(a, b);
