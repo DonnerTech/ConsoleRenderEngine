@@ -32,7 +32,9 @@ int init();
 
 void blank();
 
-void render(double targetms, int tick);
+void renderFrame(void);
+
+void printfFrameTimes(double targetms, int tick);
 
 void end();
 

@@ -39,6 +39,9 @@
     <ClCompile Include="matrix3x3.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="physicsTest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vector3.h">
@@ -54,6 +57,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="matrix3x3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physicsTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

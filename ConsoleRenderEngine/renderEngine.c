@@ -5,7 +5,7 @@
 #define PI 3.14159
 #define TWO_PI 6.28318
 
-#define NUM_THREADS 32
+#define NUM_THREADS 16
 
 const double TRIANGLE_SIZE = 0.45;
 const double TRIANGLE_POS_X = 0;
@@ -499,10 +499,13 @@ void blank()
 	}
 }
 
-void render(double targetms,int tick)
+void renderFrame(void)
 {
 	printArray();
+}
 
+void printfFrameTimes(double targetms, int tick)
+{
 	clock_t executiontimeEnd = clock();   // End timing
 	double time_elapsed = (double)(executiontimeEnd - executiontimeStart); // Calculate elapsed frametime
 	printf("Execution time: %f milliseconds\n", time_elapsed);
@@ -511,9 +514,10 @@ void render(double targetms,int tick)
 	printf("Frame time: %f milliseconds\n", frameTime);
 
 	printf("Delta time: %f miliseconds\n", deltaTime);
-		
+
 	if (time_elapsed < targetms)
 		_sleep(targetms - (int)time_elapsed); // 16ms per frame = 60 fps
+
 }
 
 void end()

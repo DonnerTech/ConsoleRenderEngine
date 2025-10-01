@@ -9,6 +9,7 @@
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
 #include "renderEngine.h"
+#include "physicsTest.h"
 
 
 //int* entityIDs;
@@ -48,7 +49,14 @@ void draw(int tick)
 		vecB.x, vecB.y, character);
 }
 
+void renderSpheres();
+
 int main(void)
+{
+	physics_test();
+}
+
+void renderSpheres()
 {
 	srand(time(clock()));
 	//renderer_unit_tests();
@@ -102,14 +110,15 @@ int main(void)
 
 		fsRayTraceMultithreaded(spherePositions, sphereSizes, COUNT, 90, 20);
 
-		render(16,tick); //16 = 60fps, 32 = 30fps
+		renderFrame(); //16 = 60fps, 32 = 30fps
+		printfFrameTimes(16, tick);
 
 		tick++;
 
 		// check if the esc key was pressed exit the loop
 		if (_kbhit())
 		{
-			if(_getch() == 27)
+			if (_getch() == 27)
 				isRunning = false;
 		}
 	}

@@ -126,6 +126,7 @@
     <ClCompile Include="main.c" />
     <ClCompile Include="matrix3x3.c" />
     <ClCompile Include="physicsEngine.c" />
+    <ClCompile Include="physicsTest.c" />
     <ClCompile Include="quaternion.c" />
     <ClCompile Include="renderEngine.c" />
     <ClCompile Include="vector2.c" />
@@ -135,6 +136,7 @@
   <ItemGroup>
     <ClInclude Include="matrix3x3.h" />
     <ClInclude Include="physicsEngine.h" />
+    <ClInclude Include="physicsTest.h" />
     <ClInclude Include="quaternion.h" />
     <ClInclude Include="renderEngine.h" />
     <ClInclude Include="vector3.h" />
