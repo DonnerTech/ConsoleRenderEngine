@@ -5,7 +5,7 @@
 #define PI 3.14159
 #define TWO_PI 6.28318
 
-#define NUM_THREADS 16
+#define NUM_THREADS 32
 
 const double TRIANGLE_SIZE = 0.45;
 const double TRIANGLE_POS_X = 0;
@@ -194,7 +194,7 @@ float smin(float a, float b, float k)
 }
 
 //TODO: Implement new smooth minimums code
-char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
+char marchRay(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
 {
 
 	double reflectiveness = 1000; // [0, infinity]
@@ -289,7 +289,36 @@ char traceRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 	return ' ';
 }
 
-void fsRayTrace(Vector3* spheres, double *size, int count, double fov, double maxDepth)
+char sphereRayIntersections(Vector3* spheres, double* sizes, int count, Vector3 ray_position, Vector3 ray_direction, double maxDistance)
+{
+	// doesent even find the closest one lol... This is like super bare bones
+
+	for (int i = 0; i < count; i++)
+	{
+		double direct_dist = vector3_magnitude(vector3_subtract(spheres[i], ray_position));
+		double angle = vector3_angle(vector3_subtract(spheres[i], ray_position), ray_direction);
+		
+		// if the distance to the point perpendicular to the sphere is less than the radius and it is in front of the camera
+		// trig stuff :>
+		double a = sin(angle) * direct_dist;
+		if (a < sizes[i] && cos(angle) > 0)
+		{
+			if (a < sizes[i] - (sizes[i] / 6))
+				return '#';
+			else
+				return '*';
+		}
+	}
+
+	if (vector3_angle(ray_direction, (Vector3){ 0.0, -1.0, 0.0 }) > PI / 2)
+	{
+		return '^';
+	}
+
+	return ' ';
+}
+
+void fsRayTrace(Vector3* spheres, double *size, int count, double fov, double maxDepth, int quality)
 {
 	for (int i = 0; i < width * height; i++)
 	{
@@ -304,7 +333,10 @@ void fsRayTrace(Vector3* spheres, double *size, int count, double fov, double ma
 		rayPos.y = 0;
 		rayPos.z = 0;
 
-		renderArray[i] = traceRay(spheres, size, count, rayPos, rayDir, maxDepth);
+		if(quality == 0)
+			renderArray[i] = sphereRayIntersections(spheres, size, count, rayPos, rayDir, maxDepth);
+		else
+			renderArray[i] = marchRay(spheres, size, count, rayPos, rayDir, maxDepth);
 	}
 }
 
@@ -314,6 +346,7 @@ typedef struct {
 	int count;
 	double fov;
 	double maxDepth;
+	int quality;
 	int id;
 } RayGroupArgs;
 
@@ -339,14 +372,17 @@ DWORD WINAPI rtWorker(LPVOID arg)
 		rayPos.y = 0;
 		rayPos.z = 0;
 
-		renderArray[i] = traceRay(args->spheres, args->size, args->count, rayPos, rayDir, args->maxDepth);
+		if(args->quality == 0)
+			renderArray[i] = sphereRayIntersections(args->spheres, args->size, args->count, rayPos, rayDir, args->maxDepth);
+		else
+			renderArray[i] = marchRay(args->spheres, args->size, args->count, rayPos, rayDir, args->maxDepth);
 	}
 
 	free(args); // free allocated memory after use
 	return 0;
 }
 
-int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fov, double maxDepth)
+int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fov, double maxDepth, int quality)
 {
 	HANDLE threads[NUM_THREADS];
 
@@ -360,6 +396,7 @@ int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fo
 		args->count = count;
 		args->fov = fov;
 		args->maxDepth = maxDepth;
+		args->quality = quality;
 
 		args->id = i;
 
@@ -485,6 +522,13 @@ int init()
 
 	return 0;
 }
+
+void resetDeltaTime()
+{
+	deltaTime = 0;
+	executiontimeStart = clock();
+}
+
 
 void blank()
 {

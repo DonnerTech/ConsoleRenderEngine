@@ -85,7 +85,7 @@ Contact collide_box_box(RigidBody* boxA, RigidBody* boxB);
 // Collision Resolution
 void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitution);
 
-#define MAX_BODIES 128
+#define MAX_BODIES 1024
 
 typedef struct {
 	RigidBody bodies[MAX_BODIES];

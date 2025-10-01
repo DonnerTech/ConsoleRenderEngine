@@ -53,7 +53,7 @@ void renderSpheres();
 
 int main(void)
 {
-	physics_test();
+	sphere_physics_test();
 }
 
 void renderSpheres()
@@ -93,9 +93,9 @@ void renderSpheres()
 
 	bool isRunning = true;
 	int tick = 0;
-
 	double rot = 0;
 
+	resetDeltaTime();
 	// render loop
 	while (isRunning)
 	{
@@ -108,7 +108,7 @@ void renderSpheres()
 		spherePositions[0].x = sin(rot) * 2;
 		spherePositions[0].z = 4 + cos(rot) * 2;
 
-		fsRayTraceMultithreaded(spherePositions, sphereSizes, COUNT, 90, 20);
+		fsRayTraceMultithreaded(spherePositions, sphereSizes, COUNT, 90, 20, HIGH_QUALITY_RT);
 
 		renderFrame(); //16 = 60fps, 32 = 30fps
 		printfFrameTimes(16, tick);

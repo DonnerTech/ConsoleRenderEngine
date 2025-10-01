@@ -1,13 +1,15 @@
 #include "physicsTest.h"
 
-#define SPHERE_COUNT 10
+#define SPHERE_COUNT 100
 
 // hacked together test of physics engine
 // missing proper render engine integration
 // kinda winging it this is too fun
-void physics_test(void)
+void sphere_physics_test(void)
 {
+	//PhysicsWorld *world = malloc(sizeof(PhysicsWorld));
 	PhysicsWorld world;
+
 	physicsWorld_Init(&world, (Vector3) { 0.0, 0.981, 0.0 });
 
 	Vector3 sphere_poses[SPHERE_COUNT];
@@ -39,28 +41,33 @@ void physics_test(void)
 		return init_status;
 	}
 
+	int renderer_quality = LOW_QUALITY_RT, rq_cooldown = 0;
+
 	bool isRunning = true;
 	int tick = 0;
-
-	double rot = 0;
-
+	double sim_frequency = 0;
+	resetDeltaTime();
 	// render loop
 	while (isRunning)
 	{
 		blank(); // clear screen
 
-		// apply forces
-		for (int i = 0; i < SPHERE_COUNT; i++)
-		{
-			Vector3 target = (Vector3){ 0.0, -1.0, 2.0 };
-			Vector3 force = vector3_scale(vector3_normalize(vector3_subtract(target, world.bodies[i].position)), 3);
-			rb_apply_force(&world.bodies[i], force, world.bodies[i].position);
-		}
-
 		// update physics
-		for (int i = 0; i < (int)deltaTime/10 + 1; i++)
+		sim_frequency = 0;
+		for (int i = 0; i < (int)deltaTime / 10 + 1; i++)
 		{
+			// apply forces
+			for (int i = 0; i < SPHERE_COUNT; i++)
+			{
+
+				Vector3 target = (Vector3){ 0.0, 1.0, 2.0 };
+				Vector3 force = vector3_scale(vector3_normalize(vector3_subtract(target, world.bodies[i].position)), 0.5);
+				rb_apply_force(&world.bodies[i], force, world.bodies[i].position);
+			}
+
+			// update
 			physicsWorld_Update(&world, 0.00016); // 1% realtime
+			sim_frequency++;
 		}
 
 		
@@ -72,26 +79,37 @@ void physics_test(void)
 		}
 
 		//rendering
-		fsRayTraceMultithreaded(sphere_poses, sphere_radii, SPHERE_COUNT, 90, 20);
+		//fsRayTraceMultithreaded(sphere_poses, sphere_radii, SPHERE_COUNT, 90, 20, renderer_quality);
 
 		// send frame to console
 		renderFrame(); //16 = 60fps, 32 = 30fps
 
 		// debug
 		printf("sphere position: ( %lf, %lf, %lf )\n", world.bodies[0].position.x, world.bodies[0].position.y, world.bodies[0].position.z);
-		printf("plane position: ( %lf, %lf, %lf )\n", world.bodies[1].position.x, world.bodies[1].position.y, world.bodies[1].position.z);
+		printf("plane position: ( %lf, %lf, %lf )\n", world.bodies[SPHERE_COUNT].position.x, world.bodies[SPHERE_COUNT].position.y, world.bodies[SPHERE_COUNT].position.z);
+		sim_frequency /= (deltaTime / 1000.0);
+		printf("simulation frequency: %lf TPS \n", sim_frequency);
 
 		// frame timing
-		printfFrameTimes(16, tick);
+		printfFrameTimes(32, tick);
 
 		tick++;
-
+		rq_cooldown -= deltaTime;
 
 		// check if the esc key was pressed exit the loop
 		if (_kbhit())
 		{
-			if (_getch() == 27)
+			int input = _getch();
+			if (input == 27)// 'esc' key
 				isRunning = false;
+			if (input == 'r') // 'r' key
+			{
+				if (rq_cooldown <= 0)
+				{
+					renderer_quality = renderer_quality ? LOW_QUALITY_RT : HIGH_QUALITY_RT;
+					rq_cooldown = 1000; // miliseconds
+				}
+			}
 		}
 	}
 	end();

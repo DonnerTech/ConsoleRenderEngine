@@ -14,6 +14,9 @@
 #include "vector2.h"
 #include "vector3.h"
 
+#define LOW_QUALITY_RT 0
+#define HIGH_QUALITY_RT 1
+
 double deltaTime;
 
 void polarToEuler(double r, double theta, double* x, double* y);
@@ -22,13 +25,15 @@ void rotatingTriangleDemo(int tick);
 
 void drawTriangleToArray(double x1, double y1, double x2, double y2, double x3, double y3, char c);
 
-void fsRayTrace(Vector3* spheres, double* size, int count, double fov, double maxDepth);
+void fsRayTrace(Vector3* spheres, double* size, int count, double fov, double maxDepth, int quality);
 
-int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fov, double maxDepth);
+int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fov, double maxDepth, int quality);
 
 void renderer_unit_tests();
 
 int init();
+
+void resetDeltaTime(void);
 
 void blank();
 
