@@ -79,7 +79,7 @@ void sphere_physics_test(void)
 		}
 
 		//rendering
-		rayTraceMultithreaded(sphere_poses, sphere_radii, SPHERE_COUNT, 90, 20, renderer_quality);
+		fsrayTraceMultithreaded(sphere_poses, sphere_radii, SPHERE_COUNT, 90, 20, renderer_quality);
 
 		// send frame to console
 		renderFrame(); //16 = 60fps, 32 = 30fps
