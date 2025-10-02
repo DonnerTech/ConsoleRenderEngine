@@ -1,39 +1,12 @@
 #pragma once
-#ifndef PHYSICSENGINE_H
-#define PHYSICSENGINE_H
+#ifndef PHYSICS_ENGINE_H
+#define PHYSICS_ENGINE_H
 
 #include "quaternion.h"
 #include "vector3.h"
 #include "matrix3x3.h"
+#include "shapeDefinitions.h"
 #include <stdbool.h>
-
-typedef enum {
-	SHAPE_SPHERE,
-	SHAPE_BOX,
-	SHAPE_PLANE
-} ShapeType;
-
-typedef struct {
-	double radius;
-} SphereShape;
-
-typedef struct {
-	Vector3 half_extents; // half sizes (x,y,z)
-} BoxShape;
-
-typedef struct {
-	Vector3 normal; // unit vector
-	double offset;  // distance from origin along normal
-} PlaneShape;
-
-typedef struct {
-	ShapeType type;
-	union {
-		SphereShape sphere;
-		BoxShape box;
-		PlaneShape plane;
-	};
-} CollisionShape;
 
 typedef struct {
 	Vector3 position;

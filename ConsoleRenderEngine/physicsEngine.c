@@ -363,7 +363,10 @@ void physicsWorld_Init(PhysicsWorld* physicsWorld, Vector3 gravity)
 
 void physicsWorld_AddBody(PhysicsWorld* physicsWorld, RigidBody rigidbody)
 {
-	if (physicsWorld->body_count >= MAX_BODIES) return;
+	if (physicsWorld->body_count >= MAX_BODIES)
+	{
+		return -1;
+	}
 
 	physicsWorld->bodies[physicsWorld->body_count++] = rigidbody; // Add to world
 }
