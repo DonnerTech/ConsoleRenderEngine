@@ -130,8 +130,6 @@ void rb_apply_torque(RigidBody* body, Vector3 torque)
 	);
 }
 
-// TODO: Add matrix functions
-
 void update_inertia_tensor(RigidBody* body)
 {
 	if (body->isStatic) return;
