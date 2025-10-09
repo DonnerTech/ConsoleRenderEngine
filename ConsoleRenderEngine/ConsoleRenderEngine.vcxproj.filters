@@ -42,9 +42,6 @@
     <ClCompile Include="physicsTest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="shapeDefinitions.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vector3.h">
@@ -65,7 +62,7 @@
     <ClInclude Include="physicsTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="shapeDefinitions.h">
+    <ClInclude Include="body.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

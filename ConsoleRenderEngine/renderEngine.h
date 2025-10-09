@@ -7,31 +7,39 @@
 #include <stdlib.h> // memory allocation
 #include <math.h>
 #include <time.h>
-#include <Windows.h>
+#include <Windows.h> // Multithreading
 
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
 #include "vector2.h"
 #include "vector3.h"
+#include "quaternion.h"
 
-#define LOW_QUALITY_RT 0
-#define HIGH_QUALITY_RT 1
+#include "body.h"
+
+typedef struct {
+	Vector3 origin;
+	Vector3 direction;
+
+	Vector3 invdir; // 1.0 / direction
+
+	int sign[3]; // sign for each axis
+} Ray;
 
 double deltaTime;
 
-void polarToEuler(double r, double theta, double* x, double* y);
+void create_ray(Ray* ray, Vector3 origin, Vector3 direction);
 
-void rotatingTriangleDemo(int tick);
+// [depricated]
+int renderer_raymarch(Vector3* spheres, double* size, int count, double fov, double maxDepth);
 
-void drawTriangleToArray(double x1, double y1, double x2, double y2, double x3, double y3, char c);
-
-void fsRayTrace(Vector3* spheres, double* size, int count, double fov, double maxDepth, int quality);
-
-int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fov, double maxDepth, int quality);
+int renderer_raytrace(Body* bodies, int count, double fov);
 
 void renderer_unit_tests();
 
-int init();
+int init(int w, int h);
+
+int userInit();
 
 void resetDeltaTime(void);
 

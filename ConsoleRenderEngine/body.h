@@ -1,8 +1,9 @@
 #pragma once
-#ifndef SHAPE_DEFINITIONS_H
-#define SHAPE_DEFINITIONS_H
+#ifndef Body_H
+#define Body_H
 
 #include "vector3.h"
+#include "quaternion.h"
 
 typedef enum {
 	SHAPE_SPHERE,
@@ -24,12 +25,15 @@ typedef struct {
 } PlaneShape;
 
 typedef struct {
+	Vector3 position;
+	Quaternion orientation;
+
 	ShapeType type;
 	union {
 		SphereShape sphere;
 		BoxShape box;
 		PlaneShape plane;
 	};
-} CollisionShape;
+} Body;
 
 #endif

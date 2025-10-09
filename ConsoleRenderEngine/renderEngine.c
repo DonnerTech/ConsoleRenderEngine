@@ -18,8 +18,21 @@ char* renderArray;
 
 clock_t executiontimeStart;
 
+// creates a ray from an origin and direction
+void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
+{
+	ray->origin = origin;
+	ray->direction = direction;
+	ray->invdir.x = 1.0 / direction.x;
+	ray->invdir.y = 1.0 / direction.y;
+	ray->invdir.z = 1.0 / direction.z;
+	ray->sign[0] = (ray->invdir.x < 0);
+	ray->sign[1] = (ray->invdir.y < 0);
+	ray->sign[2] = (ray->invdir.z < 0);
+}
+
 //create the new frame in a buffer and push it to the console in one call.
-void printArray()
+void printFrame()
 {
 	// Each cell is (2 chars) + newline per row + null terminator
 	size_t bufferSize = (width * 2 + 1) * height + 1;
@@ -44,90 +57,6 @@ void printArray()
 	free(buffer);
 }
 
-double area(double x1, double y1, double x2, double y2, double x3, double y3) {
-	return fabs((x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2.0f);
-}
-
-// The point is inside the triangle if the sum of areas of sub-triangles (PAB, PBC, PCA) equals the area of ABC.
-bool pointInTriangle(double px, double py,
-	double x1, double y1,
-	double x2, double y2,
-	double x3, double y3)
-{
-	double A = area(x1, y1, x2, y2, x3, y3);
-	double A1 = area(px, py, x2, y2, x3, y3);
-	double A2 = area(x1, y1, px, py, x3, y3);
-	double A3 = area(x1, y1, x2, y2, px, py);
-
-	return fabs(A - (A1 + A2 + A3)) < 1e-4; // allow for some error
-}
-
-void polarToEuler(double r, double theta, double* x, double* y) {
-	*x = r * cos(theta);
-	*y = r * sin(theta);
-}
-
-void rotatingTriangleDemo(int tick)
-{
-	double x1, y1;
-	double x2, y2;
-	double x3, y3;
-
-	double rot = (double)tick / 100;
-	polarToEuler(TRIANGLE_SIZE, rot, &x1, &y1);
-	rot += (TWO_PI / 3.0);
-	polarToEuler(TRIANGLE_SIZE, rot, &x2, &y2);
-	rot += (TWO_PI / 3.0);
-	polarToEuler(TRIANGLE_SIZE, rot, &x3, &y3);
-
-	x1 += TRIANGLE_POS_X;
-	x2 += TRIANGLE_POS_X;
-	x3 += TRIANGLE_POS_X;
-
-	y1 += TRIANGLE_POS_Y;
-	y2 += TRIANGLE_POS_Y;
-	y3 += TRIANGLE_POS_Y;
-
-	for (int i = 0; i < width * height; i++)
-	{
-
-		if (pointInTriangle(i % width, i / width,
-			x1 * width + width / 2, y1 * height + height / 2,
-			x2 * width + width / 2, y2 * height + height / 2,
-			x3 * width + width / 2, y3 * height + height / 2))
-		{
-			renderArray[i] = '#';
-		}
-
-	}
-}
-
-void drawTriangleToArray(double x1, double y1, double x2, double y2, double x3, double y3, char c)
-{
-
-	x1 += TRIANGLE_POS_X;
-	x2 += TRIANGLE_POS_X;
-	x3 += TRIANGLE_POS_X;
-
-	y1 += TRIANGLE_POS_Y;
-	y2 += TRIANGLE_POS_Y;
-	y3 += TRIANGLE_POS_Y;
-
-	for (int i = 0; i < width * height; i++)
-	{
-
-
-		if (pointInTriangle(i % width, i / width,
-			x1 * width + width / 2, y1 * height + height / 2,
-			x2 * width + width / 2, y2 * height + height / 2,
-			x3 * width + width / 2, y3 * height + height / 2))
-		{
-			renderArray[i] = c;
-		}
-
-	}
-}
-
 bool spherePointIntersectionTest(Vector3 pos, double size, Vector3 point)
 {
 	Vector3 difference = vector3_subtract(pos, point);
@@ -135,70 +64,19 @@ bool spherePointIntersectionTest(Vector3 pos, double size, Vector3 point)
 
 	return distance < size;
 }
-
-//bool cubePointIntersectionTest(Vector3 pos, )
-
 Vector3 sphereNormal(Vector3 pos, Vector3 point)
 {
 	Vector3 difference = vector3_subtract(pos, point);
 	return vector3_normalize(difference);
 }
 
-
-
-double GetDistance(Vector3* spheres, double* size, int count, double maxDistance, Vector3 rayPos)
-{
-	double minDist = maxDistance + 1;
-	for (int z = 0; z < count; z++)
-	{
-		double distance = vector3_magnitude(vector3_subtract(spheres[z], rayPos)) - size[z];
-		if (distance < minDist)
-		{
-			minDist = distance;
-		}
-	}
-
-	double distance = fabs(GROUND_HEIGHT - rayPos.y);
-	if (distance < minDist)
-	{
-		minDist = distance;
-	}
-
-	minDist = smin(distance, minDist, 0.25);
-}
-
-//Vector3 GetNormal(Vector3 position, )
-//{
-//	float distance = GetDist(p);
-//	Vector2 epsilon = Vector2(.01, 0);
-//	Vector3 n = distance - vec3(
-//		GetDist(position - epsilon.xyy), //X Component
-//		GetDist(position - epsilon.yxy), //Y Component
-//		GetDist(position - epsilon.yyx)  //Z Component
-//	);
-//
-//	return normalize(n);
-//}
-
 bool groundIntersectionTest(Vector3 point)
 {
 	return point.y > GROUND_HEIGHT;
 }
 
-// sigmoid
-float smin(float a, float b, float k)
+char raymarch(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
 {
-	k *= log(2.0);
-	float x = b - a;
-	return a + x / (1.0 - exp2(x / k));
-}
-
-//TODO: Implement new smooth minimums code
-char marchRay(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
-{
-
-	double reflectiveness = 1000; // [0, infinity]
-
 	Vector3 normalizedDirection = vector3_normalize(direction);
 	double stepSize = 0.0;
 
@@ -211,10 +89,6 @@ char marchRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 
 	for (double i = 0; i < maxDistance;)
 	{
-		//raymarch distance calculation checked against the spheres and the ground
-
-		//double minDist = GetDistance(spheres, size, count, maxDistance, rayPos);
-
 		double minDist = maxDistance + 1;
 		for (int z = 0; z < count; z++)
 		{
@@ -248,8 +122,6 @@ char marchRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 
 			Vector3 up = {0, 1, 0};
 			normalizedDirection = vector3_reflect(normalizedDirection, up);
-
-			//normalizedDirection = vector3_normalize(vector3_add(vector3_reflect(normalizedDirection, up), vector3_random()));
 		}
 
 		// sphere intersection tests
@@ -265,10 +137,6 @@ char marchRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 
 				rayPos = vector3_subtract(rayPos, vector3_scale(normalizedDirection, stepSize));
 				normalizedDirection = vector3_reflect(normalizedDirection, sphereNormal(spheres[z], rayPos));
-				//Vector3 sphereNorm = sphereNormal(spheres[z], rayPos);
-				//double angle = fabs(vector3_angle(normalizedDirection, sphereNorm));
-				//normalizedDirection = vector3_normalize(vector3_add(vector3_reflect(vector3_scale(normalizedDirection, reflectiveness + angle * angle * angle), sphereNorm), vector3_random()));
-
 			}
 		}
 
@@ -289,70 +157,18 @@ char marchRay(Vector3* spheres, double* size, int count, Vector3 position, Vecto
 	return ' ';
 }
 
-char sphereRayIntersections(Vector3* spheres, double* sizes, int count, Vector3 ray_position, Vector3 ray_direction, double maxDistance)
-{
-	// doesent even find the closest one lol... This is like super bare bones
-
-	for (int i = 0; i < count; i++)
-	{
-		double direct_dist = vector3_magnitude(vector3_subtract(spheres[i], ray_position));
-		double angle = vector3_angle(vector3_subtract(spheres[i], ray_position), ray_direction);
-		
-		// if the distance to the point perpendicular to the sphere is less than the radius and it is in front of the camera
-		// trig stuff :>
-		double a = sin(angle) * direct_dist;
-		if (a < sizes[i] && cos(angle) > 0)
-		{
-			if (a < sizes[i] - (sizes[i] / 6))
-				return '#';
-			else
-				return '*';
-		}
-	}
-
-	if (vector3_angle(ray_direction, (Vector3){ 0.0, -1.0, 0.0 }) > PI / 2)
-	{
-		return '^';
-	}
-
-	return ' ';
-}
-
-void fsRayTrace(Vector3* spheres, double *size, int count, double fov, double maxDepth, int quality)
-{
-	for (int i = 0; i < width * height; i++)
-	{
-		Vector3 rayDir;
-		rayDir.x = (((i % width)  - (width / 2.0)) / width * 2) * fov/90 * ( (double)width / height);
-		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * fov/90 * ( (double)height / width);
-		rayDir.z = 1;
-		//Vector3 rayPos;
-
-		Vector3 rayPos;
-		rayPos.x = 0;
-		rayPos.y = 0;
-		rayPos.z = 0;
-
-		if(quality == 0)
-			renderArray[i] = sphereRayIntersections(spheres, size, count, rayPos, rayDir, maxDepth);
-		else
-			renderArray[i] = marchRay(spheres, size, count, rayPos, rayDir, maxDepth);
-	}
-}
-
 typedef struct {
 	Vector3* spheres;
 	double* size;
 	int count;
 	double fov;
 	double maxDepth;
-	int quality;
 	int id;
-} RayGroupArgs;
+} RaymarchGroupArgs;
 
-DWORD WINAPI rtWorker(LPVOID arg)
+DWORD WINAPI raymarchWorker(LPVOID arg)
 {
-	RayGroupArgs* args = (RayGroupArgs*)arg;
+	RaymarchGroupArgs* args = (RaymarchGroupArgs*)arg;
 
 	int arrayLength = width * height;
 
@@ -372,23 +188,20 @@ DWORD WINAPI rtWorker(LPVOID arg)
 		rayPos.y = 0;
 		rayPos.z = 0;
 
-		if(args->quality == 0)
-			renderArray[i] = sphereRayIntersections(args->spheres, args->size, args->count, rayPos, rayDir, args->maxDepth);
-		else
-			renderArray[i] = marchRay(args->spheres, args->size, args->count, rayPos, rayDir, args->maxDepth);
+		renderArray[i] = raymarch(args->spheres, args->size, args->count, rayPos, rayDir, args->maxDepth);
 	}
 
 	free(args); // free allocated memory after use
 	return 0;
 }
 
-int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fov, double maxDepth, int quality)
+int renderer_raymarch(Vector3* spheres, double* size, int count, double fov, double maxDepth)
 {
 	HANDLE threads[NUM_THREADS];
 
 	// Launch threads
 	for (int i = 0; i < NUM_THREADS; i++) {
-		RayGroupArgs* args = malloc(sizeof(RayGroupArgs));
+		RaymarchGroupArgs* args = malloc(sizeof(RaymarchGroupArgs));
 		if (!args) return 1;
 
 		args->spheres = spheres;
@@ -396,14 +209,13 @@ int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fo
 		args->count = count;
 		args->fov = fov;
 		args->maxDepth = maxDepth;
-		args->quality = quality;
 
 		args->id = i;
 
 		threads[i] = CreateThread(
 			NULL,       // default security
 			0,          // default stack size
-			rtWorker,     // thread function
+			raymarchWorker,     // thread function
 			args,        // argument
 			0,          // run immediately
 			NULL        // thread id not needed
@@ -411,6 +223,241 @@ int fsRayTraceMultithreaded(Vector3* spheres, double* size, int count, double fo
 
 		if (threads[i] == NULL) {
 			fprintf(stderr, "Error creating thread %d\n", i);
+			return 1;
+		}
+	}
+
+	// Wait for threads
+	WaitForMultipleObjects(NUM_THREADS, threads, TRUE, INFINITE);
+
+	// Clean up handles
+	for (int i = 0; i < NUM_THREADS; i++) CloseHandle(threads[i]);
+
+	return 0;
+}
+
+// doesent even find the closest one lol... This is like super bare bones
+
+bool raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
+{
+	double direct_dist = vector3_magnitude(vector3_subtract(sphere.position, ray.origin));
+	double angle = vector3_angle(vector3_subtract(sphere.position, ray.origin), ray.direction);
+	
+	// if the distance to the point perpendicular to the sphere is less than the radius and it is in front of the camera
+	// trig stuff :>
+
+	*dist_ptr = direct_dist - cos(angle) * sphere.sphere.radius;
+
+	double a = sin(angle) * direct_dist;
+	if (a < sphere.sphere.radius && cos(angle) > 0)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr)
+{
+	*dist_ptr = 1e30;
+
+	Ray ba_ray;
+
+	// convert the ray to the box's local space
+	Vector3 origin = vector3_subtract(ray.origin, box.position);
+	origin = quat_rotate_vector(quat_conjugate(box.orientation), origin);
+
+	// convert direction to local space
+	Vector3 direction = quat_rotate_vector(quat_conjugate(box.orientation), ray.direction);
+
+	create_ray(&ba_ray, origin, direction);
+
+	// do ray intersection with axis alligned bounding box
+	// Credit to Scratchapixel for the AABB-Ray optimized intersection algorithm
+	// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html
+	
+	Vector3 zero = (Vector3){ 0,0,0 };
+
+	Vector3 bounds[2];
+	bounds[0] = vector3_subtract(zero, box.box.half_extents); // min
+	bounds[1] = vector3_add(zero, box.box.half_extents); // max
+
+	float tmin, tmax, tymin, tymax, tzmin, tzmax;
+
+	tmin = (bounds[ba_ray.sign[0]].x - ba_ray.origin.x) * ba_ray.invdir.x;
+	tmax = (bounds[1 - ba_ray.sign[0]].x - ba_ray.origin.x) * ba_ray.invdir.x;
+	tymin = (bounds[ba_ray.sign[1]].y - ba_ray.origin.y) * ba_ray.invdir.y;
+	tymax = (bounds[1 - ba_ray.sign[1]].y - ba_ray.origin.y) * ba_ray.invdir.y;
+
+	if ((tmin > tymax) || (tymin > tmax))
+		return false;
+
+	if (tymin > tmin)
+		tmin = tymin;
+	if (tymax < tmax)
+		tmax = tymax;
+
+	tzmin = (bounds[ba_ray.sign[2]].z - ba_ray.origin.z) * ba_ray.invdir.z;
+	tzmax = (bounds[1 - ba_ray.sign[2]].z - ba_ray.origin.z) * ba_ray.invdir.z;
+
+	if ((tmin > tzmax) || (tzmin > tmax))
+		return false;
+
+	if (tzmin > tmin)
+		tmin = tzmin;
+	if (tzmax < tmax)
+		tmax = tzmax;
+
+	// Compute intersection distance
+	if (tmax < 0)
+		return false; // box is behind ray
+
+	if (tmin < 0)
+		*dist_ptr = tmax; // inside box
+	else
+		*dist_ptr = tmin; // first hit
+
+	return true;
+}
+
+bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr)
+{
+	double denom = vector3_dot(plane.plane.normal, ray.direction);
+
+	// If the ray is parallel to the plane, no intersection
+	if (fabs(denom) < 1e-8)
+		return false;
+
+	// Compute dist for the intersection point
+	*dist_ptr = -(vector3_dot(plane.plane.normal, ray.origin) - plane.plane.offset) / denom;
+
+	// Intersection must be in front of the ray
+	if (*dist_ptr < 0.0)
+		return false;
+
+	return true;
+}
+
+char raytrace(Body* body, int count, Ray ray)
+{
+	char displayChar = ' ';
+
+	double minDist = 1e30;
+	double dist = 0;
+	double* dist_ptr = &dist;
+
+	for (int i = 0; i < count; i++)
+	{
+		if (body[i].type == SHAPE_SPHERE)
+		{
+			if (raySphereIntersection(body[i], ray, dist_ptr))
+			{
+				if (dist < minDist)
+				{
+					minDist = dist;
+					displayChar = '#';
+				}
+			}
+		}
+		else if (body[i].type == SHAPE_BOX)
+		{
+			if (rayBoxIntersection(body[i], ray, dist_ptr))
+			{
+				if (dist < minDist)
+				{
+					minDist = dist;
+					displayChar = 'X';
+				}
+			}
+		}
+		else if (body[i].type == SHAPE_PLANE)
+		{
+			if (rayPlaneIntersection(body[i], ray, dist_ptr))
+			{
+				if (dist < minDist)
+				{
+					minDist = dist;
+					displayChar = '-';
+				}
+			}
+		}
+		else
+		{
+			// unknown shape
+			displayChar = '?';
+		}
+	}
+
+	return displayChar;
+}
+
+typedef struct {
+	Body* bodies;
+	int count;
+	double fov;
+	int id;
+} RaytraceGroupArgs;
+
+DWORD WINAPI raytraceWorker(LPVOID arg)
+{
+	RaytraceGroupArgs* args = (RaytraceGroupArgs*)arg;
+
+	int arrayLength = width * height;
+
+	int start = (arrayLength / NUM_THREADS) * args->id;
+	int end = (args->id == NUM_THREADS - 1) ? arrayLength : start + (arrayLength / NUM_THREADS);
+
+	for (int i = start; i < end; i++)
+	{
+		Vector3 rayDir;
+		rayDir.x = (((i % width) - (width / 2.0)) / width * 2) * args->fov / 90 * ((double)width / height);
+		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * args->fov / 90 * ((double)height / width);
+		rayDir.z = 1;
+
+		Vector3 rayPos;
+		rayPos.x = 0;
+		rayPos.y = 0;
+		rayPos.z = 0;
+
+		Ray ray;
+		rayDir = vector3_normalize(rayDir);
+		create_ray(&ray, rayPos, rayDir);
+
+		renderArray[i] = raytrace(args->bodies, args->count, ray);
+	}
+
+	free(args); // free allocated memory after use
+	return 0;
+}
+
+
+int renderer_raytrace(Body* bodies, int count, double fov)
+{
+	HANDLE threads[NUM_THREADS];
+
+	// Launch threads
+	for (int i = 0; i < NUM_THREADS; i++) {
+		RaytraceGroupArgs* args = malloc(sizeof(RaytraceGroupArgs));
+		if (!args) return 1;
+
+		args->bodies = bodies;
+		args->count = count;
+		args->fov = fov;
+
+		args->id = i;
+
+		threads[i] = CreateThread(
+			NULL,       // default security
+			0,          // default stack size
+			raytraceWorker,     // thread function
+			args,        // argument
+			0,          // run immediately
+			NULL        // thread id not needed
+		);
+
+		if (threads[i] == NULL) {
+			fprintf(stderr, "Error creating thread %d\n", i);
+			system("pause");
 			return 1;
 		}
 	}
@@ -466,8 +513,28 @@ void renderer_unit_tests()
 	test_vector3_random();
 }
 
+int init(int w, int h)
+{
+	width = w;
+	height = h;
+	// dynamically allocates the memory for an array of boolians the size of the output display.
+	// calloc initalizes all the references to zero.
+	renderArray = (char*)calloc(width * height, sizeof(char));
 
-int init()
+	if (renderArray == NULL)
+	{
+		printf("Memory Allocation Error\n");
+		return 2;
+	}
+
+	renderArray[width / 2] = '#'; // half width point
+	renderArray[height / 2 * width] = '#'; // half height point
+	renderArray[height / 2 * width + width / 2] = '#'; // center point
+
+	return 0;
+}
+
+int userInit()
 {
 	char useStandardDimensions = '\0';
 
@@ -506,21 +573,7 @@ int init()
 	// wait for user input to contine
 	_getch();
 
-	// dynamically allocates the memory for an array of boolians the size of the output display.
-	// calloc initalizes all the references to zero.
-	renderArray = (char*)calloc(width * height, sizeof(char));
-
-	if (renderArray == NULL)
-	{
-		printf("Memory Allocation Error\n");
-		return 2;
-	}
-
-	renderArray[width / 2] = '#'; // half width point
-	renderArray[height / 2 * width] = '#'; // half height point
-	renderArray[height / 2 * width + width / 2] = '#'; // center point
-
-	return 0;
+	return init(width, height);
 }
 
 void resetDeltaTime()
@@ -545,7 +598,7 @@ void blank()
 
 void renderFrame(void)
 {
-	printArray();
+	printFrame();
 }
 
 void printfFrameTimes(double targetms, int tick)

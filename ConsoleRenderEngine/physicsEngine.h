@@ -5,12 +5,11 @@
 #include "quaternion.h"
 #include "vector3.h"
 #include "matrix3x3.h"
-#include "shapeDefinitions.h"
+#include "body.h"
 #include <stdbool.h>
 
 typedef struct {
-	Vector3 position;
-	Quaternion orientation;
+	Body body;
 
 	Vector3 linearVelocity;
 	Vector3 angularVelocity;
@@ -22,8 +21,6 @@ typedef struct {
 	Matrix3x3 inertiaBody;     // local-space inertia matrix3
 	Matrix3x3 inertiaBody_inv; // inverse inertia matrix3 in local space 
 	Matrix3x3 inertiaWorld_inv;// inverse inertia matrix3 in world space
-
-	CollisionShape shape;
 
 	bool isStatic; // 1 = static, 0 = dynamic
 } RigidBody;
@@ -61,7 +58,8 @@ void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitu
 #define MAX_BODIES 1024
 
 typedef struct {
-	RigidBody bodies[MAX_BODIES];
+	RigidBody rigidbodies[MAX_BODIES];
+	Body bodies[MAX_BODIES]; // for rendering
 	int body_count;
 
 	Vector3 gravity;

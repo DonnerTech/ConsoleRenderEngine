@@ -1,6 +1,6 @@
 #include "matrix3x3.h"
 
-Vector3 matrix3x3_mul_vector3(Vector3 a, Matrix3x3 M)
+Vector3 vector3_mul_matrix3x3(Vector3 a, Matrix3x3 M)
 {
     Vector3 result;
     result.x = M.m[0][0] * a.x + M.m[0][1] * a.y + M.m[0][2] * a.z;

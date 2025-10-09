@@ -129,7 +129,6 @@
     <ClCompile Include="physicsTest.c" />
     <ClCompile Include="quaternion.c" />
     <ClCompile Include="renderEngine.c" />
-    <ClCompile Include="shapeDefinitions.c" />
     <ClCompile Include="vector2.c" />
     <ClCompile Include="vector2.h" />
     <ClCompile Include="vector3.c" />
@@ -140,7 +139,7 @@
     <ClInclude Include="physicsTest.h" />
     <ClInclude Include="quaternion.h" />
     <ClInclude Include="renderEngine.h" />
-    <ClInclude Include="shapeDefinitions.h" />
+    <ClInclude Include="body.h" />
     <ClInclude Include="vector3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
