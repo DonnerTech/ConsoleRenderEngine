@@ -60,13 +60,16 @@ void physics_test(void)
 		for (int i = 0; i < (int)deltaTime / 10 + 1; i++)
 		{
 			// apply forces
-			/*for (int i = 0; i < world.body_count; i++)
+			for (int i = 0; i < world.body_count; i++)
 			{
 
-				Vector3 target = (Vector3){ 0.0, 1.0, 2.0 };
-				Vector3 force = vector3_scale(vector3_normalize(vector3_subtract(target, world.rigidbodies[i].body.position)), 0.5);
-				rb_apply_force(&world.rigidbodies[i], force, world.rigidbodies[i].body.position);
-			}*/
+				//Vector3 target = (Vector3){ 0.0, 1.0, 2.0 };
+				//Vector3 force = vector3_scale(vector3_normalize(vector3_subtract(target, world.rigidbodies[i].body.position)), 0.5);
+				//rb_apply_force(&world.rigidbodies[i], force, world.rigidbodies[i].body.position);
+
+				//Vector3 torque = (Vector3){ 0.0,0.0, 0.9 };
+				//rb_apply_torque(&world.rigidbodies[i], torque);
+			}
 
 			// update
 			physicsWorld_Update(&world, 0.00016); // 1% realtime

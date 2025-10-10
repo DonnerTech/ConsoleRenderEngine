@@ -54,7 +54,7 @@ Contact collide_box_sphere(RigidBody* box, RigidBody* sphere);
 Contact collide_box_box(RigidBody* boxA, RigidBody* boxB);
 
 // Collision Resolution
-void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitution);
+void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitution, double friction);
 
 #define MAX_BODIES 1024
 

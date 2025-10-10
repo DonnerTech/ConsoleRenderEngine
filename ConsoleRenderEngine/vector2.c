@@ -1,5 +1,4 @@
 #include "vector2.h"
-#include <math.h>
 
 // Vector addition
 Vector2 vector2_add(Vector2 a, Vector2 b) {

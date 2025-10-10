@@ -257,7 +257,7 @@ bool raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
 	return false;
 }
 
-bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr)
+bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint)
 {
 	*dist_ptr = 1e30;
 
@@ -317,7 +317,7 @@ bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr)
 	else
 		*dist_ptr = tmin; // first hit
 
-	//*localHitPoint = vector3_add(ba_ray.origin, vector3_scale(ba_ray.direction, *dist_ptr));
+	*localHitPoint = vector3_add(ba_ray.origin, vector3_scale(ba_ray.direction, *dist_ptr));
 
 	return true;
 }
@@ -363,12 +363,110 @@ char raytrace(Body* body, int count, Ray ray)
 		}
 		else if (body[i].type == SHAPE_BOX)
 		{
-			if (rayBoxIntersection(body[i], ray, dist_ptr))
+			Vector3 localHitPoint = { 0 };
+
+			if (rayBoxIntersection(body[i], ray, dist_ptr, &localHitPoint))
 			{
 				if (dist < minDist)
 				{
 					minDist = dist;
 					displayChar = 'X';
+
+					// determine which face was hit
+
+					// basic shading
+					if( fabs(localHitPoint.x - body[i].box.half_extents.x) < 1e-6 ) displayChar = '>';
+					else if( fabs(localHitPoint.x + body[i].box.half_extents.x) < 1e-6 ) displayChar = '<';
+					else if( fabs(localHitPoint.y - body[i].box.half_extents.y) < 1e-6 ) displayChar = '^';
+					else if( fabs(localHitPoint.y + body[i].box.half_extents.y) < 1e-6 ) displayChar = 'v';
+					else if( fabs(localHitPoint.z - body[i].box.half_extents.z) < 1e-6 ) displayChar = 'o';
+					else if (fabs(localHitPoint.z + body[i].box.half_extents.z) < 1e-6) displayChar = '*';
+
+					// render a dice face based on the local hit point
+
+					// side 1
+					if (localHitPoint.x > body[i].box.half_extents.x - 1e-6)
+					{
+						Vector2 pointOnFace = (Vector2){ localHitPoint.z, localHitPoint.y };
+
+						double distanceFromCenter = vector2_magnitude(pointOnFace);
+						if (distanceFromCenter < body[i].box.half_extents.x * 0.2) displayChar = ' '; // center
+					}
+					// side 2
+					else if (localHitPoint.y > body[i].box.half_extents.y - 1e-6)
+					{
+						Vector2 pointOnFace[2] = {
+							(Vector2) {localHitPoint.z + 0.3, localHitPoint.x + 0.3},
+							(Vector2) {localHitPoint.z - 0.3, localHitPoint.x - 0.3}
+						};
+						for (int j = 0; j < 2; j++)
+						{
+							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							if (distanceFromPoint < body[i].box.half_extents.y * 0.2) displayChar = ' '; // center
+						}
+					}
+					// side 3
+					else if (localHitPoint.z < -body[i].box.half_extents.z + 1e-6)
+					{
+						Vector2 pointOnFace[3] = {
+							(Vector2) {localHitPoint.x, localHitPoint.y},
+							(Vector2) {localHitPoint.x + 0.3, localHitPoint.y + 0.3},
+							(Vector2) {localHitPoint.x - 0.3, localHitPoint.y - 0.3}
+						};
+						for (int j = 0; j < 3; j++)
+						{
+							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							if (distanceFromPoint < body[i].box.half_extents.z * 0.2) displayChar = ' '; // center
+						}
+					}
+					// side 4
+					else if (localHitPoint.z > body[i].box.half_extents.z - 1e-6)
+					{
+						Vector2 pointOnFace[4] = {
+							(Vector2) {localHitPoint.x + 0.3, localHitPoint.y + 0.3},
+							(Vector2) {localHitPoint.x + 0.3, localHitPoint.y - 0.3},
+							(Vector2) {localHitPoint.x - 0.3, localHitPoint.y + 0.3},
+							(Vector2) {localHitPoint.x - 0.3, localHitPoint.y - 0.3}
+						};
+						for (int j = 0; j < 4; j++)
+						{
+							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							if (distanceFromPoint < body[i].box.half_extents.z * 0.2) displayChar = ' '; // center
+						}
+					}
+					// side 5
+					else if (localHitPoint.y < -body[i].box.half_extents.y + 1e-6)
+					{
+						Vector2 pointOnFace[5] = {
+							(Vector2) {localHitPoint.z, localHitPoint.y},
+							(Vector2) {localHitPoint.z + 0.3, localHitPoint.x + 0.3},
+							(Vector2) {localHitPoint.z + 0.3, localHitPoint.x - 0.3},
+							(Vector2) {localHitPoint.z - 0.3, localHitPoint.x + 0.3},
+							(Vector2) {localHitPoint.z - 0.3, localHitPoint.x - 0.3}
+						};
+						for (int j = 0; j < 5; j++)
+						{
+							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							if (distanceFromPoint < body[i].box.half_extents.y * 0.2) displayChar = ' '; // center
+						}
+					}
+					// side 6
+					else if (localHitPoint.x < -body[i].box.half_extents.x + 1e-6)
+					{
+						Vector2 pointOnFace[6] = {
+							(Vector2) {localHitPoint.z + 0.3, localHitPoint.y + 0.3},
+							(Vector2) {localHitPoint.z + 0.3, localHitPoint.y},
+							(Vector2) {localHitPoint.z + 0.3, localHitPoint.y - 0.3},
+							(Vector2) {localHitPoint.z - 0.3, localHitPoint.y + 0.3},
+							(Vector2) {localHitPoint.z - 0.3, localHitPoint.y},
+							(Vector2) {localHitPoint.z - 0.3, localHitPoint.y - 0.3}
+						};
+						for (int j = 0; j < 6; j++)
+						{
+							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							if (distanceFromPoint < body[i].box.half_extents.x * 0.2) displayChar = ' '; // center
+						}
+					}
 				}
 			}
 		}
