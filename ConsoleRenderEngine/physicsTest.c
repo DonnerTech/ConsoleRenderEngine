@@ -1,7 +1,7 @@
 #include "physicsTest.h"
 
 
-#define BODY_COUNT 20
+#define BODY_COUNT 2
 #define TWO_PI 6.28318530718
 
 void physics_test(void)
@@ -22,8 +22,8 @@ void physics_test(void)
 		//physicsWorld_AddBody(&world, sphere);
 
 		//creates a box
-		Vector3 half_extents = (Vector3){0.3, 0.4, 0.5};
-		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * (i*2 + 1), 2.0 }, vector3_scale(vector3_random(), 0.05));
+		Vector3 half_extents = (Vector3){0.5, 0.5, 0.5};
+		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * (i*2 + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
 
 		Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
 		orientation = quat_normalize(orientation);
@@ -60,13 +60,13 @@ void physics_test(void)
 		for (int i = 0; i < (int)deltaTime / 10 + 1; i++)
 		{
 			// apply forces
-			for (int i = 0; i < world.body_count; i++)
+			/*for (int i = 0; i < world.body_count; i++)
 			{
 
 				Vector3 target = (Vector3){ 0.0, 1.0, 2.0 };
 				Vector3 force = vector3_scale(vector3_normalize(vector3_subtract(target, world.rigidbodies[i].body.position)), 0.5);
 				rb_apply_force(&world.rigidbodies[i], force, world.rigidbodies[i].body.position);
-			}
+			}*/
 
 			// update
 			physicsWorld_Update(&world, 0.00016); // 1% realtime

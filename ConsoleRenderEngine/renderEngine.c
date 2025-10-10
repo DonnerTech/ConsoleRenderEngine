@@ -317,6 +317,8 @@ bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr)
 	else
 		*dist_ptr = tmin; // first hit
 
+	//*localHitPoint = vector3_add(ba_ray.origin, vector3_scale(ba_ray.direction, *dist_ptr));
+
 	return true;
 }
 

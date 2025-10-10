@@ -17,6 +17,7 @@ typedef struct {
 	double mass;
 	double inv_mass;
 	double restitution; // bounciness [0,1]
+	double friction;    // [0,infinity)
 
 	Matrix3x3 inertiaBody;     // local-space inertia matrix3
 	Matrix3x3 inertiaBody_inv; // inverse inertia matrix3 in local space 
