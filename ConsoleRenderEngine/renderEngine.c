@@ -337,6 +337,13 @@ bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr)
 	return true;
 }
 
+
+// I COULD NOT RESOLVE A LINKER ERROR WITH VECTOR2 AND THE RAYTRACE FUNCTION SO I ADDED THIS
+double vec_mag(Vector2 v)
+{
+	return sqrt(v.x * v.x + v.y * v.y);
+}
+
 char raytrace(Body* body, int count, Ray ray)
 {
 	char displayChar = ' ';
@@ -386,7 +393,7 @@ char raytrace(Body* body, int count, Ray ray)
 					{
 						Vector2 pointOnFace = (Vector2){ localHitPoint.z, localHitPoint.y };
 
-						double distanceFromCenter = vector2_magnitude(pointOnFace);
+						double distanceFromCenter = vec_mag(pointOnFace);
 						if (distanceFromCenter < body[i].box.half_extents.x * 0.2) displayChar = ' '; // center
 					}
 					// side 2
@@ -398,7 +405,7 @@ char raytrace(Body* body, int count, Ray ray)
 						};
 						for (int j = 0; j < 2; j++)
 						{
-							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							double distanceFromPoint = vec_mag(pointOnFace[j]);
 							if (distanceFromPoint < body[i].box.half_extents.y * 0.2) displayChar = ' '; // center
 						}
 					}
@@ -412,7 +419,7 @@ char raytrace(Body* body, int count, Ray ray)
 						};
 						for (int j = 0; j < 3; j++)
 						{
-							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							double distanceFromPoint = vec_mag(pointOnFace[j]);
 							if (distanceFromPoint < body[i].box.half_extents.z * 0.2) displayChar = ' '; // center
 						}
 					}
@@ -427,7 +434,7 @@ char raytrace(Body* body, int count, Ray ray)
 						};
 						for (int j = 0; j < 4; j++)
 						{
-							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							double distanceFromPoint = vec_mag(pointOnFace[j]);
 							if (distanceFromPoint < body[i].box.half_extents.z * 0.2) displayChar = ' '; // center
 						}
 					}
@@ -443,7 +450,7 @@ char raytrace(Body* body, int count, Ray ray)
 						};
 						for (int j = 0; j < 5; j++)
 						{
-							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							double distanceFromPoint = vec_mag(pointOnFace[j]);
 							if (distanceFromPoint < body[i].box.half_extents.y * 0.2) displayChar = ' '; // center
 						}
 					}
@@ -460,7 +467,7 @@ char raytrace(Body* body, int count, Ray ray)
 						};
 						for (int j = 0; j < 6; j++)
 						{
-							double distanceFromPoint = vector2_magnitude(pointOnFace[j]);
+							double distanceFromPoint = vec_mag(pointOnFace[j]);
 							if (distanceFromPoint < body[i].box.half_extents.x * 0.2) displayChar = ' '; // center
 						}
 					}
