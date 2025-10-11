@@ -1,10 +1,8 @@
 #include "physicsTest.h"
 
-
 #define BODY_COUNT 2
-#define TWO_PI 6.28318530718
 
-void physics_test(void)
+int physics_test(void)
 {
 	PhysicsWorld world;
 

@@ -2,9 +2,6 @@
 
 #include "renderEngine.h"
 
-#define PI 3.14159
-#define TWO_PI 6.28318
-
 #define NUM_THREADS 32
 
 const double TRIANGLE_SIZE = 0.45;
@@ -477,7 +474,7 @@ char raytrace(Body* body, int count, Ray ray)
 				if (dist < minDist)
 				{
 					minDist = dist;
-					displayChar = '-';
+					displayChar = '.';
 				}
 			}
 		}
@@ -665,13 +662,15 @@ int userInit()
 		return 1;
 	}
 
-	printf("Array memory size: %lld bytes \n", sizeof(renderArray) * width * height);
+	printf("Screen memory size: %lld bytes \n", sizeof(renderArray) * width * height);
+	system("pause");
+	system("cls");
 
-	printf("\nPress enter to begin rendering: ");
+	//printf("\nPress enter to begin rendering: ");
 
 
 	// wait for user input to contine
-	_getch();
+	//_getch();
 
 	return init(width, height);
 }

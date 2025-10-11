@@ -5,6 +5,6 @@
 #include "physicsEngine.h"
 #include "renderEngine.h"
 
-void physics_test(void);
+int physics_test(void);
 
 #endif

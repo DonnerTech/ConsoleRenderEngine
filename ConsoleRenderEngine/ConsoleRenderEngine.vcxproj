@@ -123,6 +123,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="craps.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="matrix3x3.c" />
     <ClCompile Include="physicsEngine.c" />
@@ -134,6 +135,7 @@
     <ClCompile Include="vector3.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="craps.h" />
     <ClInclude Include="matrix3x3.h" />
     <ClInclude Include="physicsEngine.h" />
     <ClInclude Include="physicsTest.h" />

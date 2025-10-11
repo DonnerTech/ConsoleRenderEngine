@@ -17,6 +17,9 @@
 
 #include "body.h"
 
+#define PI 3.14159
+#define TWO_PI 6.28318
+
 typedef struct {
 	Vector3 origin;
 	Vector3 direction;

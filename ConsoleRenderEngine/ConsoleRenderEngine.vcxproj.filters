@@ -42,6 +42,9 @@
     <ClCompile Include="physicsTest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="craps.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vector3.h">
@@ -63,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="body.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="craps.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -709,13 +709,13 @@ void physicsWorld_AddBody(PhysicsWorld* physicsWorld, RigidBody rigidbody)
 {
 	if (physicsWorld->body_count >= MAX_BODIES)
 	{
-		return -1;
+		return;
 	}
 
 	physicsWorld->rigidbodies[physicsWorld->body_count++] = rigidbody; // Add to world
 }
 
-void physicsWorld_Update(PhysicsWorld* physicsWorld, float dt)
+void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 {
 	// Already recieved user applied forces
 

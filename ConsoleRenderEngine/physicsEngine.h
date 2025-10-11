@@ -72,6 +72,6 @@ void physicsWorld_Init(PhysicsWorld* physicsWorld, Vector3 gravity);
 
 void physicsWorld_AddBody(PhysicsWorld* physicsWorld, RigidBody rigidbody);
 
-void physicsWorld_Update(PhysicsWorld* physicsWorld, float dt);
+void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt);
 
 #endif
