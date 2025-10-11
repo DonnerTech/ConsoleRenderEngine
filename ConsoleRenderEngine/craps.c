@@ -324,7 +324,7 @@ void chatter_messages(int num_rolls, int win_loss_neither, double initial_bank_b
 		}
 		if (current_bank_balance > initial_bank_balance)
 		{
-			printf("You're up! Time to go all in! \n");
+			printf("You're in the green! Time to go all in! \n");
 		}
 		else if (current_bank_balance < initial_bank_balance)
 		{
@@ -335,7 +335,7 @@ void chatter_messages(int num_rolls, int win_loss_neither, double initial_bank_b
 	{
 		if (num_rolls == 1)
 		{
-			printf("Imagine losing on your first roll. Maybe give it another shot. \n");
+			printf("Imagine losing on your first roll! \n");
 		}
 		else if (num_rolls <= 3)
 		{
