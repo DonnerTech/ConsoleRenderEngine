@@ -462,6 +462,8 @@ Contact collide_box_box(RigidBody* boxA, RigidBody* boxB /*, Contact* contacts*/
 	int bestAxisAIndex = 0;
 	int bestAxisBIndex = 0;
 
+	//Paper used: https://www.geometrictools.com/Documentation/DynamicCollisionDetection.pdf
+
 	// Axis L = A0 x B0
 	ra = a.y * AbsR.m[2][0] + a.z * AbsR.m[1][0];
 	rb = b.y * AbsR.m[0][2] + b.z * AbsR.m[0][1];

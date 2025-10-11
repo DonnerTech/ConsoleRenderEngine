@@ -435,7 +435,7 @@ char raytrace(Body* body, int count, Ray ray)
 					else if (localHitPoint.y < -body[i].box.half_extents.y + 1e-6)
 					{
 						Vector2 pointOnFace[5] = {
-							(Vector2) {localHitPoint.z, localHitPoint.y},
+							(Vector2) {localHitPoint.z, localHitPoint.x},
 							(Vector2) {localHitPoint.z + 0.3, localHitPoint.x + 0.3},
 							(Vector2) {localHitPoint.z + 0.3, localHitPoint.x - 0.3},
 							(Vector2) {localHitPoint.z - 0.3, localHitPoint.x + 0.3},
@@ -650,8 +650,8 @@ int userInit()
 	}
 	else
 	{
-		width = 192;
-		height = 108;
+		width = 160;
+		height = 90;
 	}
 
 	//free(useStandardDimensions);
@@ -704,12 +704,12 @@ void printfFrameTimes(double targetms, int tick)
 {
 	clock_t executiontimeEnd = clock();   // End timing
 	double time_elapsed = (double)(executiontimeEnd - executiontimeStart); // Calculate elapsed frametime
-	printf("Execution time: %f milliseconds\n", time_elapsed);
+	//printf("Execution time: %f milliseconds\n", time_elapsed);
 
-	double frameTime = targetms < time_elapsed ? time_elapsed : targetms;
-	printf("Frame time: %f milliseconds\n", frameTime);
+	//double frameTime = targetms < time_elapsed ? time_elapsed : targetms;
+	//printf("Frame time: %f milliseconds\n", frameTime);
 
-	printf("Delta time: %f miliseconds\n", deltaTime);
+	//printf("Delta time: %f miliseconds\n", deltaTime);
 
 	if (time_elapsed < targetms)
 		_sleep(targetms - (int)time_elapsed); // 16ms per frame = 60 fps

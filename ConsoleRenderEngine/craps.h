@@ -1,3 +1,9 @@
+/*
+ * Description: This header file provide the function declarations for the craps gambling game.
+ * Author: DonnerTech
+ * Date: October 10, 2025
+ */
+
 #pragma once
 #ifndef CRAPS_H
 #define CRAPS_H

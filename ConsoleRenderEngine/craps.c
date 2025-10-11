@@ -1,3 +1,9 @@
+/*
+ * Description: This c file implements the functions for the craps gambling game.
+ * Author: DonnerTech
+ * Date: October 10, 2025
+ */
+
 #pragma warning(disable: 4996)
 
 #include "craps.h"
@@ -13,6 +19,7 @@ void craps_game(void)
 
 	print_game_rules();
 	double bank_balance = get_bank_balance();
+	double initial_bank_balance = bank_balance;
 
 	while (bank_balance > 0)
 	{
@@ -21,6 +28,9 @@ void craps_game(void)
 		{
 			wager_amount = get_wager_amount();
 		}
+
+		int dice_rolls = 1;
+
 		printf("Rolling the dice...\n");
 		int dice_sum = roll_dice();
 		printf("You rolled a %d\n", dice_sum);
@@ -44,32 +54,36 @@ void craps_game(void)
 			printf("Your point is %d. Keep betting to make your point!\n", point_value);
 			//wager_amount = get_wager_amount(); // ask for their new wager amount again
 
-			int point_result = -1;
-			while (point_result == -1)
+			while (win_loss_or_point == -1)
 			{
+				dice_rolls++;
 				printf("Rolling the dice...\n");
 				dice_sum = roll_dice();
 				printf("You rolled a %d\n", dice_sum);
-				point_result = is_point_loss_or_neither(dice_sum, point_value);
+				win_loss_or_point = is_point_loss_or_neither(dice_sum, point_value);
 				system("pause");
 			}
-			if (point_result == 1) // made point
+			if (win_loss_or_point == 1) // made point
 			{
 				printf("You made your point! You win!\n");
 				bank_balance = adjust_bank_balance(bank_balance, wager_amount, 1);
 			}
-			else if (point_result == 0) // loss
+			else if (win_loss_or_point == 0) // loss
 			{
 				printf("You rolled a 7 before making your point. You lose.\n");
 				bank_balance = adjust_bank_balance(bank_balance, wager_amount, 0);
 			}
 		}
 		printf("Your current bank balance is: $%.2f\n", bank_balance);
+
+		// chatter msgs
+		chatter_messages(dice_rolls, win_loss_or_point, initial_bank_balance, bank_balance);
 		if (bank_balance <= 0)
 		{
 			printf("You've gone broke lmao! Game over...\n");
 			break;
 		}
+
 		char choice;
 		printf("Do you want to continue playing? (y/n): ");
 		scanf(" %c", &choice);
@@ -288,4 +302,60 @@ double adjust_bank_balance(double bank_balance, double wager_amount, int add_or_
 	return bank_balance;
 }
 
-//void chatter_messages(int num_rolls, int win_loss_neither, double initial_bank_balance, double current_bank_balance);
+void chatter_messages(int num_rolls, int win_loss_neither, double initial_bank_balance, double current_bank_balance)
+{
+	if (win_loss_neither == 1) // win
+	{
+		if (num_rolls == 1)
+		{
+			printf("What luck... Did you weigh the dice? \n");
+		}
+		else if (num_rolls <= 3)
+		{
+			printf("Not bad for a rookie \n");
+		}
+		else if (num_rolls <= 6)
+		{
+			printf("That sure took a while but you made it in the end! \n");
+		}
+		else
+		{
+			printf("You're one lucky gambler! \n");
+		}
+		if (current_bank_balance > initial_bank_balance)
+		{
+			printf("You're up! Time to go all in! \n");
+		}
+		else if (current_bank_balance < initial_bank_balance)
+		{
+			printf("You won, but you're still down overall. Better keep gambling kiddo\n");
+		}
+	}
+	else if (win_loss_neither == 0) // loss
+	{
+		if (num_rolls == 1)
+		{
+			printf("Imagine losing on your first roll. Maybe give it another shot. \n");
+		}
+		else if (num_rolls <= 3)
+		{
+			printf("Tough luck mate. You almost had em! \n");
+		}
+		else if (num_rolls <= 6)
+		{
+			printf("What a game, to bad the house always comes on top! \n");
+		}
+		else
+		{
+			printf("%d rolls just to lose. What a tragedy \n", num_rolls);
+		}
+		if (current_bank_balance < initial_bank_balance && current_bank_balance > 0)
+		{
+			printf("You're down but not for the count, give it another shot! \n");
+		}
+		else if (current_bank_balance > initial_bank_balance)
+		{
+			printf("You're still green kid! \n");
+		}
+	}
+}
