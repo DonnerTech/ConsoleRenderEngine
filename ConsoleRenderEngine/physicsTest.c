@@ -14,28 +14,30 @@ void physics_test(void)
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
 		// creates a sphere
-		//double size = 0.1;
-		//Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - size * i, 2.0 }, vector3_scale(vector3_random(), 0.05));
+		double size = 0.1;
+		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - size * i, 2.0 }, vector3_scale(vector3_random(), 0.05));
 
-		//RigidBody sphere = rb_create_sphere(position, size, 1.0);
-		//sphere.restitution = 0.999;
-		//physicsWorld_AddBody(&world, sphere);
+		RigidBody sphere = rb_create_sphere(position, size, 1.0);
+		sphere.restitution = 0.999;
+		sphere.friction = 50;
+		physicsWorld_AddBody(&world, sphere);
 
 		//creates a box
-		Vector3 half_extents = (Vector3){0.5, 0.5, 0.5};
-		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * (i*2 + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
+		//Vector3 half_extents = (Vector3){0.5, 0.5, 0.5};
+		//Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * (i*2 + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
 
-		Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
-		orientation = quat_normalize(orientation);
-		RigidBody box = rb_create_box(position, half_extents, orientation, 1.0);
-		box.restitution = 0.2;
-		physicsWorld_AddBody(&world, box);
+		//Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
+		//orientation = quat_normalize(orientation);
+		//RigidBody box = rb_create_box(position, half_extents, orientation, 1.0);
+		//box.restitution = 0.2;
+		//physicsWorld_AddBody(&world, box);
 	}
 	
 
 	// creates the ground plane
 	RigidBody ground = rb_create_plane((Vector3) { 0.0, -1.0, 0.0 }, -1.5);
 	ground.restitution = 0.999;
+	ground.friction = 1000000;
 	physicsWorld_AddBody(&world, ground);
 
 	// inits the renderer
@@ -104,16 +106,26 @@ void physics_test(void)
 
 		tick++;
 
-		// check if the esc key was pressed exit the loop
-		if (_kbhit())
-		{
-			int input = _getch();
-			if (input == 27)// 'esc' key
-				isRunning = false;
-			if (input == 'r') // 'r' key
-			{
+		int power = 30;
 
-			}
+		if (GetAsyncKeyState('W') & 0x8000) {
+			printf("Move up\n");
+			rb_apply_force(&world.rigidbodies[0], (Vector3) { 0, 0, power }, world.rigidbodies[0].body.position);
+		}
+		if (GetAsyncKeyState('A') & 0x8000) {
+			printf("Move left\n");
+			rb_apply_force(&world.rigidbodies[0], (Vector3) { -power, 0, 0 }, world.rigidbodies[0].body.position);
+		}
+		if (GetAsyncKeyState('S') & 0x8000) {
+			printf("Move down\n");
+			rb_apply_force(&world.rigidbodies[0], (Vector3) { 0, 0, -power }, world.rigidbodies[0].body.position);
+		}
+		if (GetAsyncKeyState('D') & 0x8000) {
+			printf("Move right\n");
+			rb_apply_force(&world.rigidbodies[0], (Vector3) { power, 0, 0 }, world.rigidbodies[0].body.position);
+		}
+		if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+			isRunning = false;
 		}
 	}
 
