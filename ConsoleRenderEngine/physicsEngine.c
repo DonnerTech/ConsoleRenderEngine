@@ -675,9 +675,9 @@ void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitu
 	{
 		tangent = vector3_normalize(tangent);
 		double jt = -vector3_dot(relative_velocity, tangent);
-		jt /= inv_mass_a + inv_mass_b + 
-			  vector3_dot(vector3_cross(vector3_mul_matrix3x3(vector3_cross(ra, tangent), a->inertiaWorld_inv), ra), tangent) +
-			  vector3_dot(vector3_cross(vector3_mul_matrix3x3(vector3_cross(rb, tangent), b->inertiaWorld_inv), rb), tangent) + 1e-8; // avoid div by zero
+		jt /= inv_mass_a + inv_mass_b +
+			vector3_dot(vector3_cross(vector3_mul_matrix3x3(vector3_cross(ra, tangent), a->inertiaWorld_inv), ra), tangent) +
+			vector3_dot(vector3_cross(vector3_mul_matrix3x3(vector3_cross(rb, tangent), b->inertiaWorld_inv), rb), tangent) + 1e-8; // avoid div by zero
 		// Coulomb's law
 		double mu = friction;
 		Vector3 frictionImpulse;
@@ -686,6 +686,10 @@ void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitu
 		else
 			frictionImpulse = vector3_scale(tangent, -j * mu);
 		// Apply friction impulse
+
+		//printf("Friction Impulse: %f, %f, %f\n", frictionImpulse.x, frictionImpulse.y, frictionImpulse.z);
+		//system("pause");
+
 		if (!a->isStatic)
 		{
 			a->linearVelocity = vector3_add(a->linearVelocity, vector3_scale(frictionImpulse, inv_mass_a));

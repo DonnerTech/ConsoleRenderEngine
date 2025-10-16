@@ -541,7 +541,7 @@ int userInit()
 	char useStandardDimensions = '\0';
 
 	// get the users input
-	printf("Hello I'm Rendy! An askii rendering engine.\n");
+	printf("Hello I'm Rendy! The askii renderer config manager.\n");
 	printf("Would you like to use the standard dimenstions? (y/n): ");
 	scanf("%c", &useStandardDimensions);
 

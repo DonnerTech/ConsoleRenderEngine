@@ -9,35 +9,35 @@ void physics_test(void)
 	PhysicsWorld world;
 
 	// initialize the world with earth's gravity
-	physicsWorld_Init(&world, (Vector3) { 0.0, 0.981, 0.0 });
+	physicsWorld_Init(&world, (Vector3) { 0.0, 9.81, 0.0 });
 	
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
 		// creates a sphere
-		double size = 0.1;
-		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - size * i, 2.0 }, vector3_scale(vector3_random(), 0.05));
+		//double size = 0.1;
+		//Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - size * i, 2.0 }, vector3_scale(vector3_random(), 0.05));
 
-		RigidBody sphere = rb_create_sphere(position, size, 1.0);
-		sphere.restitution = 0.999;
-		sphere.friction = 50;
-		physicsWorld_AddBody(&world, sphere);
+		//RigidBody sphere = rb_create_sphere(position, size, 1.0);
+		//sphere.restitution = 1;
+		//sphere.friction = 0.5;
+		//physicsWorld_AddBody(&world, sphere);
 
 		//creates a box
-		//Vector3 half_extents = (Vector3){0.5, 0.5, 0.5};
-		//Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * (i*2 + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
+		Vector3 half_extents = (Vector3){0.5, 0.5, 0.5};
+		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * (i*2 + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
 
-		//Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
-		//orientation = quat_normalize(orientation);
-		//RigidBody box = rb_create_box(position, half_extents, orientation, 1.0);
-		//box.restitution = 0.2;
-		//physicsWorld_AddBody(&world, box);
+		Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
+		orientation = quat_normalize(orientation);
+		RigidBody box = rb_create_box(position, half_extents, orientation, 1.0);
+		box.restitution = 0.2;
+		physicsWorld_AddBody(&world, box);
 	}
 	
 
 	// creates the ground plane
 	RigidBody ground = rb_create_plane((Vector3) { 0.0, -1.0, 0.0 }, -1.5);
-	ground.restitution = 0.999;
-	ground.friction = 1000000;
+	ground.restitution = 1;
+	ground.friction = 0.5;
 	physicsWorld_AddBody(&world, ground);
 
 	// inits the renderer
@@ -87,10 +87,20 @@ void physics_test(void)
 		printf("object count: %d \n", world.body_count);
 
 		// print object positions
-		//for (int i = 0; i < world.body_count; i++)
-		//{
-		//	printf("obj %d pos: { %lf, %lf, %lf } \n", i, world.rigidbodies[i].body.position.x, world.rigidbodies[i].body.position.y, world.rigidbodies[i].body.position.z);
-		//}
+		for (int i = 0; i < world.body_count; i++)
+		{
+			printf("obj %d pos: { %lf, %lf, %lf } \n", i, world.rigidbodies[i].body.position.x, world.rigidbodies[i].body.position.y, world.rigidbodies[i].body.position.z);
+		
+			for (int j = i + 1; j < world.body_count; j++)
+			{
+				double average_restitution = (world.rigidbodies[i].restitution * world.rigidbodies[j].restitution) / 2.0;
+				double average_friction = (world.rigidbodies[i].friction * world.rigidbodies[j].friction) / 2.0;
+
+				printf("obj %d and obj %d: ", i, j);
+				printf("{ average_restitution: %lf ", average_restitution);
+				printf("average_friction: %lf }\n", average_friction);
+			}
+		}
 
 		Contact contact;
 		contact = collide_box_plane(&world.rigidbodies[0], &world.rigidbodies[world.body_count - 1]);
@@ -106,7 +116,7 @@ void physics_test(void)
 
 		tick++;
 
-		int power = 30;
+		int power = 80;
 
 		if (GetAsyncKeyState('W') & 0x8000) {
 			printf("Move up\n");
