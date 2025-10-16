@@ -1,7 +1,7 @@
 #include "physicsTest.h"
 
 
-#define BODY_COUNT 100
+#define BODY_COUNT 50
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);

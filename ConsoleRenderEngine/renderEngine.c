@@ -43,7 +43,7 @@ void printFrame()
 
 	for (int i = 0; i < width * height; i++)
 	{
-		ptr += sprintf(ptr, "%c ", renderArray[i]);
+		ptr += sprintf(ptr, "%c%c", renderArray[i], renderArray[i]);
 
 		if (i % width == width - 1)
 			ptr += sprintf(ptr, "\n");
