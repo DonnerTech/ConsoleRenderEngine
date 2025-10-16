@@ -18,6 +18,8 @@ char* renderArray;
 
 clock_t executiontimeStart;
 
+HANDLE console_output_handle;
+
 // creates a ray from an origin and direction
 void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
 {
@@ -32,9 +34,11 @@ void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
 }
 
 //create the new frame in a buffer and push it to the console in one call.
-void printFrame()
+void winPrintFrame()
 {
-	// Each cell is (2 chars) + newline per row + null terminator
+	COORD topLeft = { 0, 0 };
+	DWORD written;
+
 	size_t bufferSize = (width * 2 + 1) * height + 1;
 	char* buffer = (char*)malloc(bufferSize);
 	if (!buffer) return;
@@ -51,8 +55,8 @@ void printFrame()
 
 	*ptr = '\0'; // Null terminate
 
-	system("cls");
-	printf("%s", buffer);
+	SetConsoleCursorPosition(console_output_handle, topLeft);
+	WriteConsoleA(console_output_handle, buffer, bufferSize, &written, NULL);
 
 	free(buffer);
 }
@@ -559,6 +563,9 @@ int init(int w, int h)
 	renderArray[height / 2 * width] = '#'; // half height point
 	renderArray[height / 2 * width + width / 2] = '#'; // center point
 
+	// get the console handel for clean screen blitting
+	console_output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
 	return 0;
 }
 
@@ -626,7 +633,8 @@ void blank()
 
 void renderFrame(void)
 {
-	printFrame();
+	//printFrame();
+	winPrintFrame();
 }
 
 void printfFrameTimes(double targetms, int tick)
@@ -640,8 +648,8 @@ void printfFrameTimes(double targetms, int tick)
 
 	printf("Delta time: %f miliseconds\n", deltaTime);
 
-	if (time_elapsed < targetms)
-		_sleep(targetms - (int)time_elapsed); // 16ms per frame = 60 fps
+	if (deltaTime < targetms && deltaTime > 0)
+		_sleep(targetms - (int)deltaTime); // 16ms per frame = 60 fps
 
 }
 

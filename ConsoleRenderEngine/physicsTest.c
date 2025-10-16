@@ -1,12 +1,12 @@
 #include "physicsTest.h"
 
 
-#define BODY_COUNT 50
+#define BODY_COUNT 100
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
 
-void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle);
+void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle, double dt);
 
 void physics_test(void)
 {
@@ -80,7 +80,7 @@ void physics_test(void)
 		// constantly rotating camera
 		//camera_angle = quat_integrate(camera_angle, (Vector3) { 0, 50, 0 }, 0.00016);
 
-		cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle);
+		cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, deltaTime);
 
 		renderer_raytrace(world.bodies, camera_pos, camera_angle, world.body_count, 90.0);
 
@@ -118,7 +118,7 @@ void physics_test(void)
 		printf("simulation frequency: %lf TPS \n", sim_frequency);
 
 		// frame timing
-		printfFrameTimes(32, tick);
+		printfFrameTimes(15, tick);
 
 		tick++;
 
@@ -132,7 +132,7 @@ void physics_test(void)
 	return 0;
 }
 
-void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle)
+void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle, double dt)
 {
 	const double speed = 350;
 	double input = 0;
@@ -144,7 +144,7 @@ void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_an
 		input++;
 	}
 
-	*camera_angle = quat_integrate(*camera_angle, (Vector3) { 0, input * speed, 0 }, 0.00016);
+	*camera_angle = quat_integrate(*camera_angle, (Vector3) { 0, input * speed * dt / 16, 0 }, 0.00016);
 
 
 	Vector3 camera_forward = quat_rotate_vector(*camera_angle, (Vector3) { 0, 0, 2 });

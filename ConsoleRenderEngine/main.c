@@ -15,7 +15,7 @@ int main(void)
 
 	Texture *textureA = (Texture*)malloc(sizeof(Texture));
 
-	texLoader_LoadImage(textureA, L"texture_test.png");
+	texLoader_LoadImage(textureA, L"textures\\texture_test.png");
 
 
 	texture_DebugPrint(textureA, 0);
