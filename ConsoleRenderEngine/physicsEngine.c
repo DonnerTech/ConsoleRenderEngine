@@ -671,7 +671,7 @@ void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitu
 
 	// Friction impulse
 	Vector3 tangent = vector3_subtract(relative_velocity, vector3_scale(contact.normal, vel_along_normal));
-	if (vector3_magnitude(tangent) > 1e-8)
+	if (vector3_magnitude(tangent) > 0)
 	{
 		tangent = vector3_normalize(tangent);
 		double jt = -vector3_dot(relative_velocity, tangent);
@@ -686,10 +686,6 @@ void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitu
 		else
 			frictionImpulse = vector3_scale(tangent, -j * mu);
 		// Apply friction impulse
-
-		//printf("Friction Impulse: %f, %f, %f\n", frictionImpulse.x, frictionImpulse.y, frictionImpulse.z);
-		//system("pause");
-
 		if (!a->isStatic)
 		{
 			a->linearVelocity = vector3_add(a->linearVelocity, vector3_scale(frictionImpulse, inv_mass_a));

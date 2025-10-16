@@ -257,7 +257,7 @@ bool raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
 	return false;
 }
 
-bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr)
+bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint)
 {
 	*dist_ptr = 1e30;
 
@@ -275,7 +275,7 @@ bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr)
 	// do ray intersection with axis alligned bounding box
 	// Credit to Scratchapixel for the AABB-Ray optimized intersection algorithm
 	// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html
-	
+
 	Vector3 zero = (Vector3){ 0,0,0 };
 
 	Vector3 bounds[2];
@@ -317,12 +317,12 @@ bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr)
 	else
 		*dist_ptr = tmin; // first hit
 
-	//*localHitPoint = vector3_add(ba_ray.origin, vector3_scale(ba_ray.direction, *dist_ptr));
+	*localHitPoint = vector3_add(ba_ray.origin, vector3_scale(ba_ray.direction, *dist_ptr));
 
 	return true;
 }
 
-bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr)
+bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr, Vector3* localHitPoint)
 {
 	double denom = vector3_dot(plane.plane.normal, ray.direction);
 
@@ -332,6 +332,9 @@ bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr)
 
 	// Compute dist for the intersection point
 	*dist_ptr = -(vector3_dot(plane.plane.normal, ray.origin) - plane.plane.offset) / denom;
+
+	// set the hit position (currently global)
+	*localHitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, *dist_ptr));
 
 	// Intersection must be in front of the ray
 	if (*dist_ptr < 0.0)
@@ -363,23 +366,44 @@ char raytrace(Body* body, int count, Ray ray)
 		}
 		else if (body[i].type == SHAPE_BOX)
 		{
-			if (rayBoxIntersection(body[i], ray, dist_ptr))
+			Vector3 localHitPoint = { 0 };
+
+			if (rayBoxIntersection(body[i], ray, dist_ptr, &localHitPoint))
 			{
 				if (dist < minDist)
 				{
 					minDist = dist;
 					displayChar = 'X';
+
+					// determine which face was hit
+
+					// basic shading
+					if (fabs(localHitPoint.x - body[i].box.half_extents.x) < 1e-6) displayChar = '>';
+					else if (fabs(localHitPoint.x + body[i].box.half_extents.x) < 1e-6) displayChar = '<';
+					else if (fabs(localHitPoint.y - body[i].box.half_extents.y) < 1e-6) displayChar = '^';
+					else if (fabs(localHitPoint.y + body[i].box.half_extents.y) < 1e-6) displayChar = 'v';
+					else if (fabs(localHitPoint.z - body[i].box.half_extents.z) < 1e-6) displayChar = 'o';
+					else if (fabs(localHitPoint.z + body[i].box.half_extents.z) < 1e-6) displayChar = '*';
 				}
 			}
 		}
 		else if (body[i].type == SHAPE_PLANE)
 		{
-			if (rayPlaneIntersection(body[i], ray, dist_ptr))
+			Vector3 localHitPoint = { 0, 0, 0 };
+
+			if (rayPlaneIntersection(body[i], ray, dist_ptr, &localHitPoint))
 			{
 				if (dist < minDist)
 				{
 					minDist = dist;
 					displayChar = '-';
+
+					int c = (int)localHitPoint.x - (int)localHitPoint.z;
+
+					if (abs(c) % 2 < 1)
+					{
+						displayChar = '_';
+					}
 				}
 			}
 		}
@@ -395,6 +419,8 @@ char raytrace(Body* body, int count, Ray ray)
 
 typedef struct {
 	Body* bodies;
+	Vector3 camera_pos;
+	Quaternion camera_angle;
 	int count;
 	double fov;
 	int id;
@@ -416,14 +442,12 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * args->fov / 90 * ((double)height / width);
 		rayDir.z = 1;
 
-		Vector3 rayPos;
-		rayPos.x = 0;
-		rayPos.y = 0;
-		rayPos.z = 0;
-
 		Ray ray;
 		rayDir = vector3_normalize(rayDir);
-		create_ray(&ray, rayPos, rayDir);
+
+		rayDir = quat_rotate_vector(args->camera_angle, rayDir);
+
+		create_ray(&ray, args->camera_pos, rayDir);
 
 		renderArray[i] = raytrace(args->bodies, args->count, ray);
 	}
@@ -433,7 +457,7 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 }
 
 
-int renderer_raytrace(Body* bodies, int count, double fov)
+int renderer_raytrace(Body* bodies, Vector3 cameraPos, Quaternion cameraAngle, int count, double fov)
 {
 	HANDLE threads[NUM_THREADS];
 
@@ -443,6 +467,8 @@ int renderer_raytrace(Body* bodies, int count, double fov)
 		if (!args) return 1;
 
 		args->bodies = bodies;
+		args->camera_pos = cameraPos;
+		args->camera_angle = cameraAngle;
 		args->count = count;
 		args->fov = fov;
 
