@@ -9,5 +9,7 @@ int texLoader_LoadImage(Texture* texture, const unsigned short* const fileName);
 
 void texLoader_FreeTexture(Texture* texture);
 
-#endif // TEXTURELOADER_H
+void texLoader_test(void);
+
+#endif // TEXTURE_LOADER_H
 

@@ -9,9 +9,13 @@
 
 #pragma comment(lib, "windowscodecs.lib")
 
+#define TEXMODE_CLAMPED 0
+#define TEXMODE_REPEATING 1
+
 typedef struct {
 
-	UINT bitCount;
+	BYTE texMode;
+	BYTE bitCount;
 	UINT width;		// image width
 	UINT height;	// image height
 

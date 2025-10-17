@@ -9,20 +9,7 @@ int main(void)
 	// seed the random number generator
 	srand((unsigned int)time(NULL));
 
-	printf("Welcome to CoralEngine. The Console based game engine.\n \n");
-
-	system("pause");
-
-	Texture *textureA = (Texture*)malloc(sizeof(Texture));
-
-	texLoader_LoadImage(textureA, L"textures\\texture_test.png");
-
-
-	texture_DebugPrint(textureA, 0);
-
-	texture_DebugPrint(textureA, 1);
-
-	texLoader_FreeTexture(textureA);
+	printf("Welcome to CoralEngine. The Console based game engine.\n\n");
 
 	system("pause");
 

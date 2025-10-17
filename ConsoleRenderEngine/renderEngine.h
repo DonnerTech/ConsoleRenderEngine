@@ -33,7 +33,7 @@ void create_ray(Ray* ray, Vector3 origin, Vector3 direction);
 // [depricated]
 int renderer_raymarch(Vector3* spheres, double* size, int count, double fov, double maxDepth);
 
-int renderer_raytrace(Body* bodies, Vector3 cameraPos, Quaternion cameraAngle, int count, double fov);
+int renderer_raytrace(Body* bodies, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
 void renderer_unit_tests();
 

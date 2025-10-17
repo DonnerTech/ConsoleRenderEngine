@@ -100,3 +100,19 @@ void texLoader_FreeTexture(Texture* texture)
     free(texture->pixeldata);
     free(texture);
 }
+
+void texLoader_test(void)
+{
+    Texture* textureA = (Texture*)malloc(sizeof(Texture));
+
+    texLoader_LoadImage(textureA, L"textures\\texture_test.png");
+
+
+    texture_DebugPrint(textureA, 0);
+
+    texture_DebugPrint(textureA, 1);
+
+    texLoader_FreeTexture(textureA);
+
+    system("pause");
+}

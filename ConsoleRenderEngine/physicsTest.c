@@ -55,6 +55,7 @@ void physics_test(void)
 	int tick = 0;
 	double sim_frequency = 0;
 	resetDeltaTime();
+	system("cls");
 
 	Quaternion camera_angle = quat_from_axis_angle((Vector3) { 1, 0, 0 }, -3.14 / 8.0);
 	Vector3 camera_pos = { 0 };
@@ -82,7 +83,7 @@ void physics_test(void)
 
 		cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, deltaTime);
 
-		renderer_raytrace(world.bodies, camera_pos, camera_angle, world.body_count, 90.0);
+		renderer_raytrace(world.bodies, world.body_count, camera_pos, camera_angle, 90.0);
 
 		// send frame to console
 		renderFrame(); //16 = 60fps, 32 = 30fps
@@ -185,9 +186,14 @@ void playerController(RigidBody *player, Quaternion rotation)
 	forward = quat_rotate_vector(rotation, forward);
 	right = quat_rotate_vector(rotation, right);
 
-	Vector2 mag = (Vector2){ vector3_dot(right, player->linearVelocity), vector3_dot(forward, player->linearVelocity) };
+	//Vector2 mag = (Vector2){ vector3_dot(right, player->linearVelocity), vector3_dot(forward, player->linearVelocity) };
 
-	rb_apply_force(player, vector3_scale(right , -mag.x * (1.0 - fabs(input.x))  * counterMoveMult), player->body.position);
+	//rb_apply_force(player, vector3_scale(right , -mag.x * (1.0 - fabs(input.x))  * counterMoveMult), player->body.position);
 
-	rb_apply_force(player, vector3_scale(forward, -mag.y * (1.0 - fabs(input.y)) * counterMoveMult), player->body.position);
+	//rb_apply_force(player, vector3_scale(forward, -mag.y * (1.0 - fabs(input.y)) * counterMoveMult), player->body.position);
+
+	if (vector2_magnitude(input) == 0)
+	{
+		player->angularVelocity = (Vector3){ 0,0,0 };
+	}
 }

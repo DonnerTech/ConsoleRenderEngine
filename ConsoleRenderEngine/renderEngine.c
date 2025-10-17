@@ -36,9 +36,7 @@ void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
 //create the new frame in a buffer and push it to the console in one call.
 void winPrintFrame()
 {
-	COORD topLeft = { 0, 0 };
-	DWORD written;
-
+	// generate the buffer
 	size_t bufferSize = (width * 2 + 1) * height + 1;
 	char* buffer = (char*)malloc(bufferSize);
 	if (!buffer) return;
@@ -53,7 +51,12 @@ void winPrintFrame()
 			ptr += sprintf(ptr, "\n");
 	}
 
-	*ptr = '\0'; // Null terminate
+	*ptr = '\0';
+
+	// blit the buffer
+
+	COORD topLeft = { 0, 0 };
+	DWORD written;
 
 	SetConsoleCursorPosition(console_output_handle, topLeft);
 	WriteConsoleA(console_output_handle, buffer, bufferSize, &written, NULL);
@@ -461,7 +464,7 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 }
 
 
-int renderer_raytrace(Body* bodies, Vector3 cameraPos, Quaternion cameraAngle, int count, double fov)
+int renderer_raytrace(Body* bodies, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
 {
 	HANDLE threads[NUM_THREADS];
 
