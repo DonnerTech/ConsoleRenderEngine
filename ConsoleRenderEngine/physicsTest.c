@@ -60,7 +60,11 @@ void physics_test(void)
 	Vector3 camera_pos = { 0 };
 
 	Texture *texture = (Texture*)malloc(sizeof(Texture));
-	texLoader_LoadTexture(texture, L"texture_test.png");
+	if (texLoader_LoadTexture(texture, L"textures\\texture_test.png") == 0)
+	{
+		printf("Texture Load Fail");
+		return;
+	}
 
 	int* textureIDs = calloc(world.body_count, sizeof(int));
 

@@ -195,7 +195,7 @@ bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr, Vector3* localH
 	return true;
 }
 
-void raytrace(BYTE RGBAout[4], Body* bodies, int count, Ray ray)
+void raytrace(BYTE RGBAout[4], Body* bodies, BYTE* textureIDs, Texture* textures, int count, Ray ray)
 {
 
 	double minDist = 1e30;
@@ -254,14 +254,12 @@ void raytrace(BYTE RGBAout[4], Body* bodies, int count, Ray ray)
 				if (dist < minDist)
 				{
 					minDist = dist;
-					RGBAout[0] = 200;
-					RGBAout[1] = 200;
-					RGBAout[2] = 200;
-					RGBAout[3] = 255;
+					texture_sample(textures, (Vector2){ localHitPoint.x, -localHitPoint.z }, RGBAout);
+
 
 					int c = (int)localHitPoint.x - (int)localHitPoint.z;
 
-					if (abs(c) % 2 < 1)
+					if (abs(c) % 2 > 0)
 					{
 						RGBAout[0] = 200;
 						RGBAout[1] = 220;
@@ -320,7 +318,7 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 
 		BYTE RGBA[4] = { 0 };
 
-		raytrace(RGBA,args->bodies, args->count, ray);
+		raytrace(RGBA,args->bodies, args->textureIDs, args->textures, args->count, ray);
 
 		for (int j = 0; j < outputFrame.texture.byteCount; j++)
 		{
