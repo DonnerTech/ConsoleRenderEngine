@@ -45,6 +45,12 @@
     <ClCompile Include="vector2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="fastTrig.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="renderEngine_performanceTests.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vector3.h">
@@ -75,6 +81,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="vector2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fastTrig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="renderEngine_performanceTests.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -3,6 +3,7 @@
 #define VECTOR3_H
 
 #include <math.h>
+#include "fastTrig.h"
 #include <stdlib.h>
 
 #define HALF_RAND_MAX (RAND_MAX / 2.0)

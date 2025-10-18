@@ -17,6 +17,8 @@
 
 #include "textureLoader.h"
 
+#include "fastTrig.h"
+
 typedef struct {
 	Vector2 position;
 	Texture texture;
@@ -35,6 +37,12 @@ typedef struct {
 double deltaTime;
 
 void create_ray(Ray* ray, Vector3 origin, Vector3 direction);
+
+bool raySphereIntersection(Body sphere, Ray ray, double* dist_ptr);
+
+bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint);
+
+bool rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHitPoint);
 
 int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 

@@ -34,8 +34,8 @@ Vector3 vector3_normalize(Vector3 v) {
 }
 
 // Dot product of two vectors
-double vector3_dot(Vector3 a, Vector3 b) {
-    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+inline double vector3_dot(Vector3 a, Vector3 b) {
+    return (a.x * b.x + a.y * b.y + a.z * b.z);
 }
 
 Vector3 vector3_cross(Vector3 a, Vector3 b) {
@@ -50,11 +50,11 @@ Vector3 vector3_cross(Vector3 a, Vector3 b) {
 double vector3_angle(Vector3 a, Vector3 b)
 {
     double dot = vector3_dot(a, b);
-    double mag_a = vector3_magnitude(a);
-    double mag_b = vector3_magnitude(b);
+    double mag_a = vector3_dot(a, a);
+    double mag_b = vector3_dot(b, b);
 
     //Compute the cosine of the angle
-    double cos_theta = dot / (mag_a * mag_b);
+    double cos_theta = dot / sqrt(mag_a * mag_b);
 
     //Clamp value to avoid domain error in acos
     cos_theta = fmax(fmin(cos_theta, 1.0), -1.0);

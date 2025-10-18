@@ -102,6 +102,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -118,6 +119,7 @@
       <ConformanceMode>true</ConformanceMode>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <LanguageStandard_C>Default</LanguageStandard_C>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -125,12 +127,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="fastTrig.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="matrix3x3.c" />
     <ClCompile Include="physicsEngine.c" />
     <ClCompile Include="physicsTest.c" />
     <ClCompile Include="quaternion.c" />
     <ClCompile Include="renderEngine.c" />
+    <ClCompile Include="renderEngine_performanceTests.c" />
     <ClCompile Include="texture.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Neither</FavorSizeOrSpeed>
@@ -142,12 +146,14 @@
     <ClCompile Include="vector3.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="fastTrig.h" />
     <ClInclude Include="matrix3x3.h" />
     <ClInclude Include="physicsEngine.h" />
     <ClInclude Include="physicsTest.h" />
     <ClInclude Include="quaternion.h" />
     <ClInclude Include="renderEngine.h" />
     <ClInclude Include="body.h" />
+    <ClInclude Include="renderEngine_performanceTests.h" />
     <ClInclude Include="texture.h" />
     <ClInclude Include="textureLoader.h" />
     <ClInclude Include="vector2.h" />

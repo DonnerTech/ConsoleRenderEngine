@@ -2,9 +2,6 @@
 
 #include "renderEngine.h"
 
-#define PI 3.14159
-#define TWO_PI 6.28318
-
 #define NUM_THREADS 32
 
 //int width, height;
@@ -98,10 +95,10 @@ bool raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
 	// if the distance to the point perpendicular to the sphere is less than the radius and it is in front of the camera
 	// trig stuff :>
 
-	*dist_ptr = direct_dist - cos(angle) * sphere.sphere.radius;
+	*dist_ptr = direct_dist - fast_cos(angle) * sphere.sphere.radius;
 
-	double a = sin(angle) * direct_dist;
-	if (a < sphere.sphere.radius && cos(angle) > 0)
+	double a = fast_sin(angle) * direct_dist;
+	if (a < sphere.sphere.radius && fast_cos(angle) > 0)
 	{
 		return true;
 	}
@@ -179,18 +176,18 @@ bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr, Vector3* localH
 	double denom = vector3_dot(plane.plane.normal, ray.direction);
 
 	// If the ray is parallel to the plane, no intersection
-	if (fabs(denom) < 1e-8)
+	if (fabs(denom) < 1e-16)
 		return false;
 
 	// Compute dist for the intersection point
 	*dist_ptr = -(vector3_dot(plane.plane.normal, ray.origin) - plane.plane.offset) / denom;
 
-	// set the hit position (currently global)
-	*localHitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, *dist_ptr));
-
 	// Intersection must be in front of the ray
 	if (*dist_ptr < 0.0)
 		return false;
+
+	// set the hit position (currently global)
+	*localHitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, *dist_ptr));
 
 	return true;
 }
