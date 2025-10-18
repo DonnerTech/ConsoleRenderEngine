@@ -7,15 +7,15 @@
 #include <stdlib.h> // memory allocation
 #include <math.h>
 #include <time.h>
-#include <Windows.h> // Multithreading
+#include <windows.h> // Multithreading
 
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
-#include "vector2.h"
-#include "vector3.h"
 #include "quaternion.h"
 
 #include "body.h"
+
+#include "textureLoader.h"
 
 typedef struct {
 	Vector3 origin;
@@ -33,7 +33,7 @@ void create_ray(Ray* ray, Vector3 origin, Vector3 direction);
 // [depricated]
 int renderer_raymarch(Vector3* spheres, double* size, int count, double fov, double maxDepth);
 
-int renderer_raytrace(Body* bodies, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
+int renderer_raytrace(Body** bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
 void renderer_unit_tests();
 

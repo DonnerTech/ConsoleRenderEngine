@@ -4,7 +4,6 @@
 
 #include "texture.h"
 
-
 int texLoader_LoadImage(Texture* texture, const unsigned short* const fileName);
 
 void texLoader_FreeTexture(Texture* texture);

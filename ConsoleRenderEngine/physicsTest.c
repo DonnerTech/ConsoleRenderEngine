@@ -1,6 +1,5 @@
 #include "physicsTest.h"
 
-
 #define BODY_COUNT 100
 #define TWO_PI 6.28318530718
 
@@ -60,6 +59,11 @@ void physics_test(void)
 	Quaternion camera_angle = quat_from_axis_angle((Vector3) { 1, 0, 0 }, -3.14 / 8.0);
 	Vector3 camera_pos = { 0 };
 
+	Texture textures[1];
+	texLoader_LoadImage(&textures[0], L"texture_test.png");
+
+	int* textureIDs = calloc(world.body_count, sizeof(int));
+
 	// update loop
 	while (isRunning)
 	{
@@ -76,17 +80,14 @@ void physics_test(void)
 			sim_frequency++;
 		}
 
-		//rendering
-
-		// constantly rotating camera
-		//camera_angle = quat_integrate(camera_angle, (Vector3) { 0, 50, 0 }, 0.00016);
-
 		cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, deltaTime);
 
-		renderer_raytrace(world.bodies, world.body_count, camera_pos, camera_angle, 90.0);
+
+		//rendering
+		renderer_raytrace(world.bodies, textureIDs, textures, world.body_count, camera_pos, camera_angle, 90.0);
 
 		// send frame to console
-		renderFrame(); //16 = 60fps, 32 = 30fps
+		renderFrame();
 
 		// DEBUG INFO
 		

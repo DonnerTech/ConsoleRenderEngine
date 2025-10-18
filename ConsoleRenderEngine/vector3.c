@@ -1,4 +1,4 @@
-#include "Vector3.h"
+#include "vector3.h"
 
 Vector3 vector3_add(Vector3 a, Vector3 b) {
     Vector3 result = { a.x + b.x, a.y + b.y , a.z + b.z};

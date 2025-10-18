@@ -61,7 +61,7 @@ void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitu
 
 typedef struct {
 	RigidBody rigidbodies[MAX_BODIES];
-	Body bodies[MAX_BODIES]; // for rendering
+	Body *bodies[MAX_BODIES]; // for rendering
 	int body_count;
 
 	Vector3 gravity;
@@ -73,6 +73,6 @@ void physicsWorld_Init(PhysicsWorld* physicsWorld, Vector3 gravity);
 
 void physicsWorld_AddBody(PhysicsWorld* physicsWorld, RigidBody rigidbody);
 
-void physicsWorld_Update(PhysicsWorld* physicsWorld, float dt);
+void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt);
 
 #endif

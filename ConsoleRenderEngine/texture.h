@@ -1,11 +1,11 @@
 #pragma once
-#pragma once
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
 #include <wincodec.h>
 #include <Windows.h>
 #include <stdio.h>
+#include "vector2.h"
 
 #pragma comment(lib, "windowscodecs.lib")
 
@@ -30,6 +30,8 @@ typedef struct {
 #define CHAR_COUNT 10
 
 char texture_ValToChar(BYTE value);
+
+int texture_sample(Texture* texture_ptr, Vector2 pos, BYTE RGBA[4]);
 
 void texture_DebugPrint(Texture *texture_ptr, int colorMode);
 

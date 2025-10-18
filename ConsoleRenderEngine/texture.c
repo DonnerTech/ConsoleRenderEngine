@@ -1,4 +1,3 @@
-
 #include "texture.h"
 
 char texture_ValToChar(BYTE value)
@@ -11,6 +10,21 @@ char texture_ValToChar(BYTE value)
     index = index < 0 ? 0 : index;
 
     return chars[index];
+}
+
+int texture_sample(Texture* texture_ptr, Vector2 pos, BYTE RGBA[4])
+{
+    int index = pos.y * texture_ptr->stride + pos.x;
+
+    if (index - 4 > texture_ptr->imageSize)
+        return 0;
+
+    RGBA[0] = texture_ptr->pixeldata[index];
+    RGBA[1] = texture_ptr->pixeldata[index+1];
+    RGBA[2] = texture_ptr->pixeldata[index+2];
+    RGBA[3] = texture_ptr->pixeldata[index+3];
+
+    return 1;
 }
 
 void texture_DebugPrint(Texture* texture_ptr, int colorMode)

@@ -1,4 +1,4 @@
-#pragma warning(disable : 4996).
+#define _CRT_SECURE_NO_WARNINGS
 
 #include "renderEngine.h"
 
@@ -350,7 +350,7 @@ bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr, Vector3* localH
 	return true;
 }
 
-char raytrace(Body* body, int count, Ray ray)
+char raytrace(Body** bodies, int count, Ray ray)
 {
 	char displayChar = ' ';
 
@@ -360,9 +360,9 @@ char raytrace(Body* body, int count, Ray ray)
 
 	for (int i = 0; i < count; i++)
 	{
-		if (body[i].type == SHAPE_SPHERE)
+		if (bodies[i]->type == SHAPE_SPHERE)
 		{
-			if (raySphereIntersection(body[i], ray, dist_ptr))
+			if (raySphereIntersection(*bodies[i], ray, dist_ptr))
 			{
 				if (dist < minDist)
 				{
@@ -371,11 +371,11 @@ char raytrace(Body* body, int count, Ray ray)
 				}
 			}
 		}
-		else if (body[i].type == SHAPE_BOX)
+		else if (bodies[i]->type == SHAPE_BOX)
 		{
 			Vector3 localHitPoint = { 0 };
 
-			if (rayBoxIntersection(body[i], ray, dist_ptr, &localHitPoint))
+			if (rayBoxIntersection(*bodies[i], ray, dist_ptr, &localHitPoint))
 			{
 				if (dist < minDist)
 				{
@@ -385,20 +385,20 @@ char raytrace(Body* body, int count, Ray ray)
 					// determine which face was hit
 
 					// basic shading
-					if (fabs(localHitPoint.x - body[i].box.half_extents.x) < 1e-6) displayChar = '>';
-					else if (fabs(localHitPoint.x + body[i].box.half_extents.x) < 1e-6) displayChar = '<';
-					else if (fabs(localHitPoint.y - body[i].box.half_extents.y) < 1e-6) displayChar = '^';
-					else if (fabs(localHitPoint.y + body[i].box.half_extents.y) < 1e-6) displayChar = 'v';
-					else if (fabs(localHitPoint.z - body[i].box.half_extents.z) < 1e-6) displayChar = 'o';
-					else if (fabs(localHitPoint.z + body[i].box.half_extents.z) < 1e-6) displayChar = '*';
+					if (fabs(localHitPoint.x - bodies[i]->box.half_extents.x) < 1e-6) displayChar = '>';
+					else if (fabs(localHitPoint.x + bodies[i]->box.half_extents.x) < 1e-6) displayChar = '<';
+					else if (fabs(localHitPoint.y - bodies[i]->box.half_extents.y) < 1e-6) displayChar = '^';
+					else if (fabs(localHitPoint.y + bodies[i]->box.half_extents.y) < 1e-6) displayChar = 'v';
+					else if (fabs(localHitPoint.z - bodies[i]->box.half_extents.z) < 1e-6) displayChar = 'o';
+					else if (fabs(localHitPoint.z + bodies[i]->box.half_extents.z) < 1e-6) displayChar = '*';
 				}
 			}
 		}
-		else if (body[i].type == SHAPE_PLANE)
+		else if (bodies[i]->type == SHAPE_PLANE)
 		{
 			Vector3 localHitPoint = { 0, 0, 0 };
 
-			if (rayPlaneIntersection(body[i], ray, dist_ptr, &localHitPoint))
+			if (rayPlaneIntersection(*bodies[i], ray, dist_ptr, &localHitPoint))
 			{
 				if (dist < minDist)
 				{
@@ -425,7 +425,9 @@ char raytrace(Body* body, int count, Ray ray)
 }
 
 typedef struct {
-	Body* bodies;
+	Body** bodies;
+	int* textureIDs;
+	Texture* textures;
 	Vector3 camera_pos;
 	Quaternion camera_angle;
 	int count;
@@ -464,7 +466,7 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 }
 
 
-int renderer_raytrace(Body* bodies, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
+int renderer_raytrace(Body** bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
 {
 	HANDLE threads[NUM_THREADS];
 
@@ -474,6 +476,8 @@ int renderer_raytrace(Body* bodies, int count, Vector3 cameraPos, Quaternion cam
 		if (!args) return 1;
 
 		args->bodies = bodies;
+		args->textureIDs = textureIDs;
+		args->textures = textures;
 		args->camera_pos = cameraPos;
 		args->camera_angle = cameraAngle;
 		args->count = count;
@@ -652,7 +656,7 @@ void printfFrameTimes(double targetms, int tick)
 	printf("Delta time: %f miliseconds\n", deltaTime);
 
 	if (deltaTime < targetms && deltaTime > 0)
-		_sleep(targetms - (int)deltaTime); // 16ms per frame = 60 fps
+		Sleep(targetms - (int)deltaTime); // 16ms per frame = 60 fps
 
 }
 

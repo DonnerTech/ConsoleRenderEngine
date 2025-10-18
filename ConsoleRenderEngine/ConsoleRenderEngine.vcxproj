@@ -139,7 +139,6 @@
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
     </ClCompile>
     <ClCompile Include="vector2.c" />
-    <ClCompile Include="vector2.h" />
     <ClCompile Include="vector3.c" />
   </ItemGroup>
   <ItemGroup>
@@ -151,6 +150,7 @@
     <ClInclude Include="body.h" />
     <ClInclude Include="texture.h" />
     <ClInclude Include="textureLoader.h" />
+    <ClInclude Include="vector2.h" />
     <ClInclude Include="vector3.h" />
   </ItemGroup>
   <ItemGroup>
