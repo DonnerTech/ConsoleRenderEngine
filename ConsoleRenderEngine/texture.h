@@ -11,18 +11,19 @@
 
 #define TEXMODE_CLAMPED 0
 #define TEXMODE_REPEATING 1
+#define RGBA_WHITE {255,255,255,255}
 
 typedef struct {
 
 	BYTE texMode;
-	BYTE bitCount;
+	BYTE byteCount;
 	UINT width;		// image width
 	UINT height;	// image height
 
 	UINT stride;	// image data width
 	UINT imageSize; // the total 1D length of the image data
 
-	// The array of raw pixel data. A sequence of R, G, B, A BYTE values.
+	// The array of raw pixel data. A sequence of BYTE values for each channel.
 	BYTE* pixeldata;
 
 } Texture;

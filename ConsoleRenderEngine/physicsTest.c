@@ -1,9 +1,9 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 100
+#define BODY_COUNT 20
 #define TWO_PI 6.28318530718
 
-void playerController(RigidBody *player, Quaternion rotation);
+void playerController(RigidBody *player, Quaternion rotation, double dt);
 
 void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle, double dt);
 
@@ -59,24 +59,22 @@ void physics_test(void)
 	Quaternion camera_angle = quat_from_axis_angle((Vector3) { 1, 0, 0 }, -3.14 / 8.0);
 	Vector3 camera_pos = { 0 };
 
-	Texture textures[1];
-	texLoader_LoadImage(&textures[0], L"texture_test.png");
+	Texture *texture = (Texture*)malloc(sizeof(Texture));
+	texLoader_LoadTexture(texture, L"texture_test.png");
 
 	int* textureIDs = calloc(world.body_count, sizeof(int));
 
 	// update loop
 	while (isRunning)
 	{
-		blank(); // clear screen
-
 		// update physics
 		sim_frequency = 0;
-		for (int i = 0; i < (int)deltaTime / 10 + 1; i++)
+		for (int i = 0; i < 3; i++)
 		{
-			playerController(&world.rigidbodies[0], camera_angle);
+			playerController(&world.rigidbodies[0], camera_angle, deltaTime);
 
 			// update
-			physicsWorld_Update(&world, 0.00016); // 1% realtime
+			physicsWorld_Update(&world, 0.00001 * deltaTime); // 16% realtime
 			sim_frequency++;
 		}
 
@@ -84,7 +82,7 @@ void physics_test(void)
 
 
 		//rendering
-		renderer_raytrace(world.bodies, textureIDs, textures, world.body_count, camera_pos, camera_angle, 90.0);
+		renderer_raytrace(world.bodies, textureIDs, texture, world.body_count, camera_pos, camera_angle, 90.0);
 
 		// send frame to console
 		renderFrame();
@@ -110,17 +108,18 @@ void physics_test(void)
 		//	}
 		//}
 
-		Contact contact;
-		contact = collide_box_plane(&world.rigidbodies[0], &world.rigidbodies[world.body_count - 1]);
+		//Contact contact;
+		//contact = collide_box_plane(&world.rigidbodies[0], &world.rigidbodies[world.body_count - 1]);
 
-		printf("collided: %d depth: %lf \n", contact.collided, contact.contact_depth);
+		//printf("collided: %d depth: %lf \n", contact.collided, contact.contact_depth);
+
+		printf("FPS: %.2lf\n", 1000 / deltaTime);
 
 		// print the simulation frequency
-		sim_frequency /= (deltaTime / 1000.0);
-		printf("simulation frequency: %lf TPS \n", sim_frequency);
-
+		sim_frequency *= (1000 / deltaTime);
+		printf("TPS: %.2lf\n", sim_frequency);
 		// frame timing
-		printfFrameTimes(15, tick);
+		printfFrameTimes(16);
 
 		tick++;
 
@@ -128,6 +127,9 @@ void physics_test(void)
 			isRunning = false;
 		}
 	}
+
+	free(textureIDs);
+	texLoader_FreeTexture(texture);
 
 	end();
 
@@ -154,10 +156,10 @@ void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_an
 	*camera_pos = vector3_add(vector3_subtract(target, camera_forward), (Vector3) {0, -1, 0});
 }
 
-void playerController(RigidBody *player, Quaternion rotation)
+void playerController(RigidBody *player, Quaternion rotation, double dt)
 {
-	const double power = 10;
-	const double counterMoveMult = 0.07;
+	const double power = 10 * dt / 16;
+	const double counterMoveMult = 0.02 * dt / 16;
 	
 	Vector2 input = { 0 };
 
@@ -187,11 +189,11 @@ void playerController(RigidBody *player, Quaternion rotation)
 	forward = quat_rotate_vector(rotation, forward);
 	right = quat_rotate_vector(rotation, right);
 
-	//Vector2 mag = (Vector2){ vector3_dot(right, player->linearVelocity), vector3_dot(forward, player->linearVelocity) };
+	Vector2 mag = (Vector2){ vector3_dot(right, player->linearVelocity), vector3_dot(forward, player->linearVelocity) };
 
-	//rb_apply_force(player, vector3_scale(right , -mag.x * (1.0 - fabs(input.x))  * counterMoveMult), player->body.position);
+	rb_apply_force(player, vector3_scale(right , -mag.x * (1.0 - fabs(input.x))  * counterMoveMult), player->body.position);
 
-	//rb_apply_force(player, vector3_scale(forward, -mag.y * (1.0 - fabs(input.y)) * counterMoveMult), player->body.position);
+	rb_apply_force(player, vector3_scale(forward, -mag.y * (1.0 - fabs(input.y)) * counterMoveMult), player->body.position);
 
 	if (vector2_magnitude(input) == 0)
 	{

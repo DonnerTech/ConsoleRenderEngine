@@ -721,7 +721,7 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 
 	for (int i = 0; i < physicsWorld->body_count; i++)
 	{
-		physicsWorld->bodies[i] = &physicsWorld->rigidbodies[i].body; // update body pointers for rendering
+		physicsWorld->bodies[i] = physicsWorld->rigidbodies[i].body; // update body pointers for rendering
 	}
 
 	for (int i = 0; i < physicsWorld->body_count; i++)

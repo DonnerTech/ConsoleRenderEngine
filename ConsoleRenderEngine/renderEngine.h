@@ -18,6 +18,12 @@
 #include "textureLoader.h"
 
 typedef struct {
+	Vector2 position;
+	Texture texture;
+
+} Frame;
+
+typedef struct {
 	Vector3 origin;
 	Vector3 direction;
 
@@ -30,12 +36,7 @@ double deltaTime;
 
 void create_ray(Ray* ray, Vector3 origin, Vector3 direction);
 
-// [depricated]
-int renderer_raymarch(Vector3* spheres, double* size, int count, double fov, double maxDepth);
-
-int renderer_raytrace(Body** bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
-
-void renderer_unit_tests();
+int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
 int init(int w, int h);
 
@@ -43,11 +44,9 @@ int userInit();
 
 void resetDeltaTime(void);
 
-void blank();
-
 void renderFrame(void);
 
-void printfFrameTimes(double targetms, int tick);
+void printfFrameTimes(double targetms);
 
 void end();
 

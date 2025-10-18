@@ -61,7 +61,7 @@ void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitu
 
 typedef struct {
 	RigidBody rigidbodies[MAX_BODIES];
-	Body *bodies[MAX_BODIES]; // for rendering
+	Body bodies[MAX_BODIES]; // for rendering
 	int body_count;
 
 	Vector3 gravity;

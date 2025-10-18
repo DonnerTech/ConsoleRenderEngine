@@ -7,18 +7,18 @@
 
 #define NUM_THREADS 32
 
-const double TRIANGLE_SIZE = 0.45;
-const double TRIANGLE_POS_X = 0;
-const double TRIANGLE_POS_Y = 0;
+//int width, height;
+//char* outputFrame;
 
-const GROUND_HEIGHT = 1.5;
+Frame outputFrame;
 
-int width, height;
-char* renderArray;
+char* characterBuffer;
+size_t bufferSize;
 
-clock_t executiontimeStart;
+clock_t rendertimeClock;
+clock_t executiontimeClock;
 
-HANDLE console_output_handle;
+HANDLE co_handle;
 
 // creates a ray from an origin and direction
 void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
@@ -36,20 +36,46 @@ void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
 //create the new frame in a buffer and push it to the console in one call.
 void winPrintFrame()
 {
+	clock_t printStart = clock();
+
 	// generate the buffer
-	size_t bufferSize = (width * 2 + 1) * height + 1;
-	char* buffer = (char*)malloc(bufferSize);
-	if (!buffer) return;
+	if (!characterBuffer) return;
 
-	char* ptr = buffer;
+	char* ptr = characterBuffer;
 
-	for (int i = 0; i < width * height; i++)
+	int total = 6;
+
+	BYTE red = 0, green = 0, blue = 0;
+
+	for (int i = 0; i < outputFrame.texture.imageSize; i += outputFrame.texture.byteCount)
 	{
-		ptr += sprintf(ptr, "%c%c", renderArray[i], renderArray[i]);
-
-		if (i % width == width - 1)
+		if (i % outputFrame.texture.stride == 0)
+		{
 			ptr += sprintf(ptr, "\n");
+			total++;
+		}
+
+		int num = 0;
+
+		// slightly optomized color switching
+		if (red != outputFrame.texture.pixeldata[i] || green != outputFrame.texture.pixeldata[i + 1] || blue != outputFrame.texture.pixeldata[i + 2])
+		{
+			red = outputFrame.texture.pixeldata[i];
+			green = outputFrame.texture.pixeldata[i + 1];
+			blue = outputFrame.texture.pixeldata[i + 2];
+
+			num = sprintf(ptr, "\033[48;2;%d;%d;%dm", red, green, blue);
+			ptr += num;
+			total += num;
+		}
+
+		num = sprintf(ptr, "  ");
+
+		ptr += num;
+		total += num;
 	}
+
+	ptr += sprintf(ptr, "\033[0m\n");
 
 	*ptr = '\0';
 
@@ -58,192 +84,11 @@ void winPrintFrame()
 	COORD topLeft = { 0, 0 };
 	DWORD written;
 
-	SetConsoleCursorPosition(console_output_handle, topLeft);
-	WriteConsoleA(console_output_handle, buffer, bufferSize, &written, NULL);
+	SetConsoleCursorPosition(co_handle, topLeft);
+	WriteConsoleA(co_handle, characterBuffer, total, &written, NULL);
 
-	free(buffer);
+	printf("blitting time: %d ms\n", clock() - printStart);
 }
-
-bool spherePointIntersectionTest(Vector3 pos, double size, Vector3 point)
-{
-	Vector3 difference = vector3_subtract(pos, point);
-	double distance = vector3_magnitude(difference);
-
-	return distance < size;
-}
-Vector3 sphereNormal(Vector3 pos, Vector3 point)
-{
-	Vector3 difference = vector3_subtract(pos, point);
-	return vector3_normalize(difference);
-}
-
-bool groundIntersectionTest(Vector3 point)
-{
-	return point.y > GROUND_HEIGHT;
-}
-
-char raymarch(Vector3* spheres, double* size, int count, Vector3 position, Vector3 direction, double maxDistance)
-{
-	Vector3 normalizedDirection = vector3_normalize(direction);
-	double stepSize = 0.0;
-
-	Vector3 rayPos;
-	rayPos.x = position.x;
-	rayPos.y = position.y;
-	rayPos.z = position.z;
-
-	int reflection_count = 0;
-
-	for (double i = 0; i < maxDistance;)
-	{
-		double minDist = maxDistance + 1;
-		for (int z = 0; z < count; z++)
-		{
-			double distance = vector3_magnitude(vector3_subtract(spheres[z], rayPos)) - size[z];
-			if (distance < minDist)
-			{
-				minDist = distance;
-			}
-		}
-
-		double distance = GROUND_HEIGHT - rayPos.y;
-		if (distance < minDist)
-		{
-			minDist = distance;
-		}
-
-		stepSize = (minDist < 0.01) ? 0.01 : minDist;
-
-		rayPos = vector3_add(rayPos, vector3_scale(normalizedDirection, stepSize));
-		
-		// ground intersection test
-		if (groundIntersectionTest(rayPos))
-		{
-			if (reflection_count == 3)
-			{
-				return '.';
-			}
-			reflection_count++;
-
-			rayPos = vector3_subtract(rayPos, vector3_scale(normalizedDirection, stepSize));
-
-			Vector3 up = {0, 1, 0};
-			normalizedDirection = vector3_reflect(normalizedDirection, up);
-		}
-
-		// sphere intersection tests
-		for (int z = 0; z < count; z++)
-		{
-			if (spherePointIntersectionTest(spheres[z], size[z], rayPos))
-			{
-				if (reflection_count == 3)
-				{
-					return '.';
-				}
-				reflection_count++;
-
-				rayPos = vector3_subtract(rayPos, vector3_scale(normalizedDirection, stepSize));
-				normalizedDirection = vector3_reflect(normalizedDirection, sphereNormal(spheres[z], rayPos));
-			}
-		}
-
-		i += stepSize;
-	}
-
-	if (reflection_count > 2)
-	{
-		return '^';
-	}
-	if (reflection_count > 1)
-	{
-		return '*';
-	}
-	if (reflection_count > 0)
-		return '#';
-
-	return ' ';
-}
-
-typedef struct {
-	Vector3* spheres;
-	double* size;
-	int count;
-	double fov;
-	double maxDepth;
-	int id;
-} RaymarchGroupArgs;
-
-DWORD WINAPI raymarchWorker(LPVOID arg)
-{
-	RaymarchGroupArgs* args = (RaymarchGroupArgs*)arg;
-
-	int arrayLength = width * height;
-
-	int start = (arrayLength / NUM_THREADS) * args->id;
-	int end = (args->id == NUM_THREADS - 1) ? arrayLength : start + (arrayLength / NUM_THREADS);
-
-	for (int i = start; i < end; i++)
-	{
-		Vector3 rayDir;
-		rayDir.x = (((i % width) - (width / 2.0)) / width * 2) * args->fov / 90 * ((double)width / height);
-		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * args->fov / 90 * ((double)height / width);
-		rayDir.z = 1;
-		//Vector3 rayPos;
-
-		Vector3 rayPos;
-		rayPos.x = 0;
-		rayPos.y = 0;
-		rayPos.z = 0;
-
-		renderArray[i] = raymarch(args->spheres, args->size, args->count, rayPos, rayDir, args->maxDepth);
-	}
-
-	free(args); // free allocated memory after use
-	return 0;
-}
-
-int renderer_raymarch(Vector3* spheres, double* size, int count, double fov, double maxDepth)
-{
-	HANDLE threads[NUM_THREADS];
-
-	// Launch threads
-	for (int i = 0; i < NUM_THREADS; i++) {
-		RaymarchGroupArgs* args = malloc(sizeof(RaymarchGroupArgs));
-		if (!args) return 1;
-
-		args->spheres = spheres;
-		args->size = size;
-		args->count = count;
-		args->fov = fov;
-		args->maxDepth = maxDepth;
-
-		args->id = i;
-
-		threads[i] = CreateThread(
-			NULL,       // default security
-			0,          // default stack size
-			raymarchWorker,     // thread function
-			args,        // argument
-			0,          // run immediately
-			NULL        // thread id not needed
-		);
-
-		if (threads[i] == NULL) {
-			fprintf(stderr, "Error creating thread %d\n", i);
-			return 1;
-		}
-	}
-
-	// Wait for threads
-	WaitForMultipleObjects(NUM_THREADS, threads, TRUE, INFINITE);
-
-	// Clean up handles
-	for (int i = 0; i < NUM_THREADS; i++) CloseHandle(threads[i]);
-
-	return 0;
-}
-
-// doesent even find the closest one lol... This is like super bare bones
 
 bool raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
 {
@@ -350,9 +195,8 @@ bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr, Vector3* localH
 	return true;
 }
 
-char raytrace(Body** bodies, int count, Ray ray)
+void raytrace(BYTE RGBAout[4], Body* bodies, int count, Ray ray)
 {
-	char displayChar = ' ';
 
 	double minDist = 1e30;
 	double dist = 0;
@@ -360,56 +204,69 @@ char raytrace(Body** bodies, int count, Ray ray)
 
 	for (int i = 0; i < count; i++)
 	{
-		if (bodies[i]->type == SHAPE_SPHERE)
+		if (bodies[i].type == SHAPE_SPHERE)
 		{
-			if (raySphereIntersection(*bodies[i], ray, dist_ptr))
+			if (raySphereIntersection(bodies[i], ray, dist_ptr))
 			{
 				if (dist < minDist)
 				{
 					minDist = dist;
-					displayChar = '#';
+
+					RGBAout[0] = 50;
+					RGBAout[1] = 50;
+					RGBAout[2] = 200;
+					RGBAout[3] = 255;
 				}
 			}
 		}
-		else if (bodies[i]->type == SHAPE_BOX)
+		else if (bodies[i].type == SHAPE_BOX)
 		{
 			Vector3 localHitPoint = { 0 };
 
-			if (rayBoxIntersection(*bodies[i], ray, dist_ptr, &localHitPoint))
+			if (rayBoxIntersection(bodies[i], ray, dist_ptr, &localHitPoint))
 			{
 				if (dist < minDist)
 				{
 					minDist = dist;
-					displayChar = 'X';
+					RGBAout[0] = 255;
+					RGBAout[1] = 0;
+					RGBAout[2] = 0;
+					RGBAout[3] = 255;
 
 					// determine which face was hit
 
 					// basic shading
-					if (fabs(localHitPoint.x - bodies[i]->box.half_extents.x) < 1e-6) displayChar = '>';
-					else if (fabs(localHitPoint.x + bodies[i]->box.half_extents.x) < 1e-6) displayChar = '<';
-					else if (fabs(localHitPoint.y - bodies[i]->box.half_extents.y) < 1e-6) displayChar = '^';
-					else if (fabs(localHitPoint.y + bodies[i]->box.half_extents.y) < 1e-6) displayChar = 'v';
-					else if (fabs(localHitPoint.z - bodies[i]->box.half_extents.z) < 1e-6) displayChar = 'o';
-					else if (fabs(localHitPoint.z + bodies[i]->box.half_extents.z) < 1e-6) displayChar = '*';
+					if (fabs(localHitPoint.x - bodies[i].box.half_extents.x) < 1e-6) RGBAout[0] = 220;
+					else if (fabs(localHitPoint.x + bodies[i].box.half_extents.x) < 1e-6) RGBAout[0] = 200;
+					else if (fabs(localHitPoint.y - bodies[i].box.half_extents.y) < 1e-6) RGBAout[0] = 180;
+					else if (fabs(localHitPoint.y + bodies[i].box.half_extents.y) < 1e-6) RGBAout[0] = 160;
+					else if (fabs(localHitPoint.z - bodies[i].box.half_extents.z) < 1e-6) RGBAout[0] = 140;
+					else if (fabs(localHitPoint.z + bodies[i].box.half_extents.z) < 1e-6) RGBAout[0] = 120;
 				}
 			}
 		}
-		else if (bodies[i]->type == SHAPE_PLANE)
+		else if (bodies[i].type == SHAPE_PLANE)
 		{
 			Vector3 localHitPoint = { 0, 0, 0 };
 
-			if (rayPlaneIntersection(*bodies[i], ray, dist_ptr, &localHitPoint))
+			if (rayPlaneIntersection(bodies[i], ray, dist_ptr, &localHitPoint))
 			{
 				if (dist < minDist)
 				{
 					minDist = dist;
-					displayChar = '-';
+					RGBAout[0] = 200;
+					RGBAout[1] = 200;
+					RGBAout[2] = 200;
+					RGBAout[3] = 255;
 
 					int c = (int)localHitPoint.x - (int)localHitPoint.z;
 
 					if (abs(c) % 2 < 1)
 					{
-						displayChar = '_';
+						RGBAout[0] = 200;
+						RGBAout[1] = 220;
+						RGBAout[2] = 200;
+						RGBAout[3] = 255;
 					}
 				}
 			}
@@ -417,15 +274,16 @@ char raytrace(Body** bodies, int count, Ray ray)
 		else
 		{
 			// unknown shape
-			displayChar = '?';
+			RGBAout[0] = 200;
+			RGBAout[1] = 0;
+			RGBAout[2] = 200;
+			RGBAout[3] = 255;
 		}
 	}
-
-	return displayChar;
 }
 
 typedef struct {
-	Body** bodies;
+	Body* bodies;
 	int* textureIDs;
 	Texture* textures;
 	Vector3 camera_pos;
@@ -439,10 +297,12 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 {
 	RaytraceGroupArgs* args = (RaytraceGroupArgs*)arg;
 
-	int arrayLength = width * height;
+	int width = outputFrame.texture.width;
+	int height = outputFrame.texture.height;
+	int pixelCount = width * height;
 
-	int start = (arrayLength / NUM_THREADS) * args->id;
-	int end = (args->id == NUM_THREADS - 1) ? arrayLength : start + (arrayLength / NUM_THREADS);
+	int start = (pixelCount / NUM_THREADS) * args->id;
+	int end = (args->id == NUM_THREADS - 1) ? pixelCount : start + (pixelCount / NUM_THREADS);
 
 	for (int i = start; i < end; i++)
 	{
@@ -458,7 +318,14 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 
 		create_ray(&ray, args->camera_pos, rayDir);
 
-		renderArray[i] = raytrace(args->bodies, args->count, ray);
+		BYTE RGBA[4] = { 0 };
+
+		raytrace(RGBA,args->bodies, args->count, ray);
+
+		for (int j = 0; j < outputFrame.texture.byteCount; j++)
+		{
+			outputFrame.texture.pixeldata[i * outputFrame.texture.byteCount + j] = RGBA[j];
+		}
 	}
 
 	free(args); // free allocated memory after use
@@ -466,8 +333,10 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 }
 
 
-int renderer_raytrace(Body** bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
+int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
 {
+	rendertimeClock = clock();
+
 	HANDLE threads[NUM_THREADS];
 
 	// Launch threads
@@ -510,68 +379,27 @@ int renderer_raytrace(Body** bodies, int* textureIDs, Texture* textures, int cou
 	return 0;
 }
 
-void test_intersection_cases()
-{
-	Vector3 spherePos; // exactly 1 unit away from (0, 0, 0)
-	spherePos.x = 0;
-	spherePos.y = 0.6;
-	spherePos.z = 0.8;
-
-	Vector3 rayPos;
-	rayPos.x = 0;
-	rayPos.y = 0;
-	rayPos.z = 0;
-
-	printf("Test One (False): %d\n", spherePointIntersectionTest(spherePos, 0.1, rayPos));
-	printf("Test One (False): %d\n", spherePointIntersectionTest(spherePos, 0.99, rayPos));
-	printf("Test One (True) : %d\n", spherePointIntersectionTest(spherePos, 1.01, rayPos));
-}
-
-void test_vector3_random()
-{
-	srand(0);
-	Vector3 a = vector3_random();
-	printf("Vector3 random A: %f %f %f \n", a.x, a.y, a.z);
-	a = vector3_random();
-	printf("Vector3 random B: %f %f %f \n", a.x, a.y, a.z);
-	printf("Reset random \n");
-	srand(0);
-	a = vector3_random();
-	printf("Vector3 random A: %f %f %f \n", a.x, a.y, a.z);
-	a = vector3_random();
-	printf("Vector3 random B: %f %f %f \n", a.x, a.y, a.z);
-	printf("Seed Random \n");
-	int seed = time(clock());
-	srand(seed);
-	printf("Vector3 random %d: %f %f %f \n", seed, a.x, a.y, a.z);
-}
-
-void renderer_unit_tests()
-{
-	test_intersection_cases();
-	test_vector3_random();
-}
-
 int init(int w, int h)
 {
-	width = w;
-	height = h;
-	// dynamically allocates the memory for an array of boolians the size of the output display.
-	// calloc initalizes all the references to zero.
-	renderArray = (char*)calloc(width * height, sizeof(char));
+	outputFrame.position = (Vector2){ 0, 0 };
+	texLoader_generateTexture(&outputFrame.texture, 3, w, h);
 
-	if (renderArray == NULL)
+	bufferSize = (outputFrame.texture.width * 2 + 1) * outputFrame.texture.height * sizeof("\033[48;2;000;000;000m ") + sizeof("\033[0m") + sizeof(char);
+	characterBuffer = (char*)malloc(bufferSize);
+
+	if (characterBuffer == NULL)
+		return 1;
+
+	for (int i = 0; i < bufferSize; i++)
 	{
-		printf("Memory Allocation Error\n");
-		return 2;
+		characterBuffer[i] = '\0';
 	}
 
-	renderArray[width / 2] = '#'; // half width point
-	renderArray[height / 2 * width] = '#'; // half height point
-	renderArray[height / 2 * width + width / 2] = '#'; // center point
+	// get the console handle for clean screen blitting
+	co_handle = GetStdHandle(STD_OUTPUT_HANDLE);
 
-	// get the console handel for clean screen blitting
-	console_output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (co_handle == INVALID_HANDLE_VALUE)
+		return 1;
 
 	return 0;
 }
@@ -584,6 +412,8 @@ int userInit()
 	printf("Hello I'm Rendy! The askii renderer config manager.\n");
 	printf("Would you like to use the standard dimenstions? (y/n): ");
 	scanf("%c", &useStandardDimensions);
+
+	int width, height;
 
 	if(useStandardDimensions == 'n' || useStandardDimensions == 'N')
 	{ 
@@ -607,7 +437,10 @@ int userInit()
 		return 1;
 	}
 
-	printf("Array memory size: %lld bytes \n", sizeof(renderArray) * width * height);
+	int sizeEST = (width * 3 * 2 + 1) * height * sizeof("\033[48;2;000;000;000m ") + sizeof("\033[0m") + sizeof(char);
+
+	printf("display memory size: %0.2lfMB \n", sizeEST/1000000.0);
+
 
 	printf("\nPress enter to begin rendering: ");
 
@@ -621,21 +454,7 @@ int userInit()
 void resetDeltaTime()
 {
 	deltaTime = 0;
-	executiontimeStart = clock();
-}
-
-
-void blank()
-{
-	deltaTime = executiontimeStart;
-	executiontimeStart = clock(); // mesure frame times
-
-	deltaTime = (double)(executiontimeStart - deltaTime); // find the time difference between every blank (A frame behind)
-
-	for (int i = 0; i < width * height; i++)
-	{
-		renderArray[i] = '.';
-	}
+	executiontimeClock = clock();
 }
 
 void renderFrame(void)
@@ -644,24 +463,38 @@ void renderFrame(void)
 	winPrintFrame();
 }
 
-void printfFrameTimes(double targetms, int tick)
+void printfFrameTimes(double targetms)
 {
-	clock_t executiontimeEnd = clock();   // End timing
-	double time_elapsed = (double)(executiontimeEnd - executiontimeStart); // Calculate elapsed frametime
-	printf("Execution time: %f milliseconds\n", time_elapsed);
+	clock_t temp = executiontimeClock;
+	executiontimeClock = clock();   // End timing
+	double exec_time = (double)(executiontimeClock - temp); // Calculate elapsed loop time
 
-	double frameTime = targetms < time_elapsed ? time_elapsed : targetms;
-	printf("Frame time: %f milliseconds\n", frameTime);
+	temp = rendertimeClock;
+	rendertimeClock = clock();
+	double render_time = (double)(executiontimeClock - temp);
+
+	printf("Render exec time: %f milliseconds\n", render_time);
+
+	deltaTime = targetms < exec_time ? exec_time : targetms;
+
+	printf("Other time: %f milliseconds\n", exec_time - render_time);
+
+	printf("Smeep time: %f milliseconds\n", deltaTime - exec_time);
 
 	printf("Delta time: %f miliseconds\n", deltaTime);
 
-	if (deltaTime < targetms && deltaTime > 0)
-		Sleep(targetms - (int)deltaTime); // 16ms per frame = 60 fps
+	if (exec_time < targetms && exec_time > 0)
+		Sleep(targetms - (int)exec_time); // 16ms per frame = 60 fps
+	executiontimeClock = clock();
 
 }
 
 void end()
 {
 	//end program (cleanup)
-	free(renderArray);
+	free(outputFrame.texture.pixeldata);
+	outputFrame.texture.pixeldata = NULL;
+
+	free(characterBuffer);
+	characterBuffer = NULL;
 }

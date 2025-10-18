@@ -2,13 +2,15 @@
 #include "textureLoader.h"
 
 
-// returns false if the decoder failed to load the image
-int texLoader_LoadImage(Texture* texture, const unsigned short* const fileName) 
+
+int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName) 
 {
-    CoInitialize(NULL);
+    HRESULT hr = CoInitialize(NULL);
+    if (FAILED(hr)) return 0;
+
     IWICImagingFactory *factory = NULL;
 
-    HRESULT hr = CoCreateInstance(
+    hr = CoCreateInstance(
         &CLSID_WICImagingFactory,
         NULL,
         CLSCTX_INPROC_SERVER,
@@ -61,11 +63,12 @@ int texLoader_LoadImage(Texture* texture, const unsigned short* const fileName)
     if (texture == NULL)
         return 0;
 
+    texture->texMode = TEXMODE_REPEATING;
     texture->width = width;
     texture->height = height;
 
-    texture->bitCount = 4;
-    texture->stride = width * texture->bitCount; // 4 bytes per pixel
+    texture->byteCount = 4;
+    texture->stride = width * texture->byteCount; // 4 bytes per pixel
     texture->imageSize = texture->stride * height;
     texture->pixeldata = (BYTE*)malloc(texture->imageSize);
 
@@ -95,17 +98,33 @@ int texLoader_LoadImage(Texture* texture, const unsigned short* const fileName)
     return 1;
 }
 
+texLoader_generateTexture(Texture* texture, int byteCount, int width, int height)
+{
+    texture->texMode = TEXMODE_REPEATING;
+    texture->width = width;
+    texture->height = height;
+
+    texture->byteCount = 4;
+    texture->stride = width * texture->byteCount; // 4 bytes per pixel
+    texture->imageSize = texture->stride * height;
+    texture->pixeldata = (BYTE*)malloc(texture->imageSize);
+
+}
+
+
 void texLoader_FreeTexture(Texture* texture)
 {
     free(texture->pixeldata);
+    texture->pixeldata = NULL;
     free(texture);
+    texture = NULL;
 }
 
 void texLoader_test(void)
 {
     Texture* textureA = (Texture*)malloc(sizeof(Texture));
 
-    texLoader_LoadImage(textureA, L"textures\\texture_test.png");
+    texLoader_LoadTexture(textureA, L"textures\\texture_test.png");
 
 
     texture_DebugPrint(textureA, 0);
