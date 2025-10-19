@@ -19,7 +19,7 @@ typedef struct BVHNode {
 	Bounds bounds; // the nodes bounding volume
 	unsigned int id; // the id of the object or -1 if a branch node
 
-	// children of the node
+	// children of the node, NULL if leaf node
 	struct BVHNode* left_ptr;
 	struct BVHNode* right_ptr;
 } BVHNode;

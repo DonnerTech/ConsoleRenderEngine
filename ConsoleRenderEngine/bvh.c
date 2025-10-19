@@ -16,6 +16,7 @@ Bounds BVH_calculateBounds(Body* body_ptr)
 		case(SHAPE_BOX):
 		{
 			// creates a bounding box that is the worst case senerio
+			// could be optimized
 			Vector3 one = (Vector3){ 1,1,1 };
 
 			return (Bounds) {
