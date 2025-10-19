@@ -4,7 +4,7 @@
 
 #include <math.h>
 
-typedef struct {
+typedef struct Vector2 {
     double x;
     double y;
 

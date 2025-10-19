@@ -1,8 +1,10 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-//#include "physicsTest.h"
+#include "physicsTest.h"
 
+#if _BENCHMARK || _DEBUG
 #include "renderEngine_performanceTests.h"
+#endif
 
 int main(void)
 {
@@ -16,19 +18,23 @@ int main(void)
 
 #if _DEBUG
 	printf("\033[38;2;255;55;0m");
-	printf("WARNING! YOU ARE RUNNING IN DEBUG MODE!\nRUN IN RELEASE MODE FOR COMPILER OPTIMIZATIONS!\n");
+	printf("WARNING! YOU ARE RUNNING IN DEBUG MODE!\nRUN IN RELEASE MODE FOR COMPILER OPTIMIZATIONS!\n\n");
 	printf("\033[0m");
 #endif // _DEBUG
 
-	system("pause");
-
+#if _BENCHMARK || _DEBUG
 	testRaySphere(1000000);
 
 	testRayBox(1000000);
 
 	testRayPlane(1000000);
 
-	//physics_test();
+	test_trig_tables();
+#endif // _BENCHMARK
+
+	system("pause");
+
+	physics_test();
 
 	return 0;
 }

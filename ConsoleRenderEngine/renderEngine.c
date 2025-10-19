@@ -7,13 +7,13 @@
 //int width, height;
 //char* outputFrame;
 
-Frame outputFrame;
+static Frame outputFrame;
 
-char* characterBuffer;
-size_t bufferSize;
+static char* characterBuffer;
+static size_t bufferSize;
 
-clock_t rendertimeClock;
-clock_t executiontimeClock;
+static clock_t rendertimeClock;
+static clock_t executiontimeClock;
 
 HANDLE co_handle;
 
@@ -78,10 +78,9 @@ void winPrintFrame()
 
 	// blit the buffer
 
-	COORD topLeft = { 0, 0 };
 	DWORD written;
 
-	SetConsoleCursorPosition(co_handle, topLeft);
+	SetConsoleCursorPosition(co_handle, outputFrame.position);
 	WriteConsoleA(co_handle, characterBuffer, total, &written, NULL);
 
 	printf("blitting time: %d ms\n", clock() - printStart);
@@ -376,7 +375,7 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 
 int init(int w, int h)
 {
-	outputFrame.position = (Vector2){ 0, 0 };
+	outputFrame.position = (COORD){ 0, 0 };
 	texLoader_generateTexture(&outputFrame.texture, 3, w, h);
 
 	bufferSize = (outputFrame.texture.width * 2 + 1) * outputFrame.texture.height * sizeof("\033[48;2;000;000;000m ") + sizeof("\033[0m") + sizeof(char);

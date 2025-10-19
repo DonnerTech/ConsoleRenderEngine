@@ -20,7 +20,7 @@
 #include "fastTrig.h"
 
 typedef struct {
-	Vector2 position;
+	COORD position;
 	Texture texture;
 
 } Frame;

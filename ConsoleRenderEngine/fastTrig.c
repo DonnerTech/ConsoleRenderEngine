@@ -8,7 +8,7 @@ void init_trig_tables(void) {
 	}
 }
 
-#if _DEBUG
+#if _DEBUG || _BENCHMARK
 
 void test_trig_tables(void)
 {
@@ -16,22 +16,21 @@ void test_trig_tables(void)
 
 	clock_t trig_start = clock();
 	double num = 0;
-	for (int i = 0; i < 1000000000; i++)
+	for (int i = 0; i < 100000000; i++)
 	{
 		num += cos(i);
 	}
-	printf("1000000000 cos time: %d\n", clock() - trig_start);
+	printf("test_cos(100000000) time: %d ms\n", (int)(clock() - trig_start));
 	printf("num: %0.2lf\n", num);
 
 	trig_start = clock();
 	num = 0;
-	for (int i = 0; i < 1000000000; i++)
+	for (int i = 0; i < 100000000; i++)
 	{
 		num += fast_cos(i);
 	}
-	printf("1000000000 fast_cos time: %d\n", clock() - trig_start);
+	printf("test_fast_cos(100000000) time: %d ms\n", (int)(clock() - trig_start));
 	printf("num: %0.2lf\n", num);
-	system("pause");
 }
 
 

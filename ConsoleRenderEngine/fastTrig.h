@@ -2,7 +2,7 @@
 #ifndef FAST_TRIG_H
 #define FAST_TRIG_H
 
-#if _DEBUG
+#if _DEBUG || _BENCHMARK
 
 #include <time.h>
 #include <stdio.h>

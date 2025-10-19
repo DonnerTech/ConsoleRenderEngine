@@ -3,7 +3,7 @@
 #define BODY_COUNT 500
 #define TWO_PI 6.28318530718
 
-void playerController(RigidBody *player, Quaternion rotation, double dt);
+void playerController(RigidBody *player, Quaternion rotation);
 
 void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle, double dt);
 
@@ -75,7 +75,7 @@ void physics_test(void)
 		sim_frequency = 0;
 		for (int i = 0; i < 3; i++)
 		{
-			playerController(&world.rigidbodies[0], camera_angle, deltaTime);
+			playerController(&world.rigidbodies[0], camera_angle);
 
 			// update
 			physicsWorld_Update(&world, 0.00001 * deltaTime); // 16% realtime
@@ -160,10 +160,10 @@ void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_an
 	*camera_pos = vector3_add(vector3_subtract(target, camera_forward), (Vector3) {0, -1, 0});
 }
 
-void playerController(RigidBody *player, Quaternion rotation, double dt)
+void playerController(RigidBody *player, Quaternion rotation)
 {
-	const double power = 10 * dt / 16;
-	const double counterMoveMult = 0.02 * dt / 16;
+	const double power = 10;
+	const double counterMoveMult = 0.02;
 	
 	Vector2 input = { 0 };
 
