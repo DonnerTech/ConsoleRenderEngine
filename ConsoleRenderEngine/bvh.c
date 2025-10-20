@@ -157,7 +157,7 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	// I quantize the positions of each body
 	// then generate the code by inverleaving the 10 bit quantized positions
 	// currently hardcoded to 10 bit or 1024 different positions
-
+	// the interlieved result is 30 bits long. this fits into a uint
 	MortonIDPair* mortonCode_list = malloc(sizeof(MortonIDPair) * count);
 
 	if (mortonCode_list == NULL)
