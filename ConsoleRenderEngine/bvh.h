@@ -48,6 +48,7 @@ void BVH_freeTree(BVHNode* node);
 // Spread the lower 10 bits of a so there are 2 zeros between each bit
 static inline unsigned int BVH_expandBits(unsigned int a)
 {
+	//		spread				mask
 	a = (a * 0x00010001u) & 0xFF0000FFu;
 	a = (a * 0x00000101u) & 0x0F00F00Fu;
 	a = (a * 0x00000011u) & 0xC30C30C3u;
