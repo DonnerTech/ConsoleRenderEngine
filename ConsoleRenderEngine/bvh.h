@@ -2,12 +2,12 @@
 #ifndef BVH_H
 #define BVH_H
 
+#include <intrin.h>
 #include <math.h>
 #include "vector3.h"
 #include "body.h"
 
-
-// for quantizing spatial positions into virtual cells
+// for quantizing spatial positions into virtual cells (10 bit)
 #define QUANTIZE(min, center, max) (unsigned int)((center - min) / (max - min) * (1024 - 1))
 
 typedef struct {
@@ -17,7 +17,7 @@ typedef struct {
 
 typedef struct BVHNode {
 	Bounds bounds; // the nodes bounding volume
-	unsigned int id; // the id of the object or -1 if a branch node
+	int id; // the id of the object or -1 if a branch node
 
 	// children of the node, NULL if leaf node
 	struct BVHNode* left_ptr;
@@ -29,15 +29,21 @@ typedef struct {
 	unsigned int mortonCode;
 } MortonIDPair;
 
-Bounds BVH_calculateBounds(Body* body_ptr);
+Bounds BVH_calculateBounds(Body body);
 
-void BVH_sortByMortonCodes(MortonIDPair* mortonIDpair_list, int count);
+void BVH_sortMortonCodes(MortonIDPair* mortonIDpair_list, int count);
+
+void BVH_quicksortMortonCodes(MortonIDPair* mortonIDpair_list, int low, int high);
 
 int BVH_getSplitPos(MortonIDPair* mortonIDpair_list, int begin, int end);
 
 BVHNode* BVH_createTree(Body* body_list, int count);
 
-BVHNode* BVH_createSubTree(MortonIDPair* mortonIDpair_list, int begin, int end);
+BVHNode* BVH_createSubTree(MortonIDPair* mortonIDpair_list, Bounds* bounds_list, int begin, int end);
+
+void BVH_updateTreeBounds(BVHNode* node, Body* body_list);
+
+void BVH_freeTree(BVHNode* node);
 
 // Spread the lower 10 bits of a so there are 2 zeros between each bit
 static inline unsigned int BVH_expandBits(unsigned int a)
@@ -56,12 +62,14 @@ static inline unsigned int BVH_mortonCodeGen(unsigned int x, unsigned int y, uns
 	return (BVH_expandBits(x) << 2) | (BVH_expandBits(y) << 1) | BVH_expandBits(z);
 }
 
-static inline Bounds Bounds_union(Bounds a, Bounds b)
+inline Bounds Bounds_union(Bounds a, Bounds b)
 {
 	return (Bounds) {
 		vector3_min(a.min, b.min),
 		vector3_max(a.max, b.max)
 	};
 }
+
+void BVH_DebugPrint(const BVHNode* root);
 
 #endif //BVH_H

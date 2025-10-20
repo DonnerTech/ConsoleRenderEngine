@@ -29,7 +29,7 @@ void testRaySphere(int iter)
 
 	free(body);
 
-	printf("testRaySphere(%d) took: %d ms\n", iter, clock() - start);
+	printf("testRaySphere(%d) took: %d ms\n", iter, (clock() - start) * 1000 / CLOCKS_PER_SEC);
 }
 
 void testRayBox(int iter)
@@ -62,7 +62,7 @@ void testRayBox(int iter)
 
 	free(body);
 
-	printf("testRayBox(%d) took: %d ms\n", iter, clock() - start);
+	printf("testRayBox(%d) took: %d ms\n", iter, (clock() - start) * 1000 / CLOCKS_PER_SEC);
 }
 
 void testRayPlane(int iter)
@@ -94,5 +94,73 @@ void testRayPlane(int iter)
 
 	free(body);
 
-	printf("testRayPlane(%d) took: %d ms\n", iter, clock() - start);
+	printf("testRayPlane(%d) took: %d ms\n", iter, (clock() - start) * 1000 / CLOCKS_PER_SEC);
+}
+
+int validateBVHTree(BVHNode* node)
+{
+	if (node == NULL)
+	{
+		printf("Invalid BVH Tree! (found dead node in branch)\n");
+
+		return 0;
+	}
+
+	// if branch node continue
+	if (node->id == -1)
+	{
+		if (!validateBVHTree(node->left_ptr))
+		{
+
+			printf("(left node parent) data: %d\n", node->id);
+		}
+		if (!validateBVHTree(node->right_ptr))
+		{
+			printf("(right node parent) data: %d\n", node->id);
+		}
+	}
+
+	return 1;
+}
+
+void testBVHtree(int bodyCount, double scatter, bool print)
+{
+	Body* bodies = malloc(sizeof(Body) * bodyCount);
+
+	if (bodies == NULL)
+		return;
+
+	for (int i = 0; i < bodyCount; i++)
+	{
+		bodies[i].type = SHAPE_BOX;
+		bodies[i].box.half_extents = (Vector3){ 1,1,1 };
+		//bodies[i].type = SHAPE_SPHERE;
+		//bodies[i].sphere.radius = rand() % 10 + 1;
+
+		bodies[i].position = vector3_scale(vector3_random(), scatter);
+		bodies[i].orientation = quat_identity();
+	}
+	
+	clock_t start = clock();
+
+	BVHNode* node = BVH_createTree(bodies, bodyCount);
+
+	printf("%d leaf BVH creation time: %d ms\n", bodyCount, (clock() - start)*1000 / CLOCKS_PER_SEC);
+
+	validateBVHTree(node);
+
+	start = clock();
+
+	BVH_updateTreeBounds(node, bodies);
+
+	printf("%d leaf BVH update time: %d ms\n", bodyCount, (clock() - start)*1000 / CLOCKS_PER_SEC);
+
+	if (print)
+	{
+		BVH_DebugPrint(node);
+	}
+
+	BVH_freeTree(node);
+
+	free(bodies);
 }

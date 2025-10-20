@@ -4,10 +4,14 @@
 
 #include "renderEngine.h"
 
+#include "bvh.h"
+
 void testRaySphere(int iter);
 
 void testRayBox(int iter);
 
 void testRayPlane(int iter);
+
+void testBVHtree(int bodyCount, double scatter, bool print);
 
 #endif // RE_PTESTS_H

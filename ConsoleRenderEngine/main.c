@@ -4,6 +4,7 @@
 
 #if _BENCHMARK || _DEBUG
 #include "renderEngine_performanceTests.h"
+
 #endif
 
 int main(void)
@@ -23,6 +24,11 @@ int main(void)
 #endif // _DEBUG
 
 #if _BENCHMARK || _DEBUG
+
+	printf("\033[38;2;55;255;0m");
+	printf("===BENCHMARKING ENABLED===\n\n");
+	printf("\033[0m");
+
 	testRaySphere(1000000);
 
 	testRayBox(1000000);
@@ -30,6 +36,26 @@ int main(void)
 	testRayPlane(1000000);
 
 	test_trig_tables();
+
+	testBVHtree(10, 25,1);
+
+	
+	for (int i = 0; i < 5; i++)
+	{
+
+		testBVHtree(100, pow(10,i),0);
+
+		testBVHtree(1000, pow(10, i),0);
+
+		testBVHtree(10000, pow(10, i),0);
+
+		testBVHtree(100000, pow(10, i),0);
+
+		// last test it took 51 seconds
+		//testBVHtree(1000000, pow(10, i));
+	}
+	
+
 #endif // _BENCHMARK
 
 	system("pause");
