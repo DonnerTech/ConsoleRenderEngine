@@ -153,7 +153,7 @@ void testBVHtree(int bodyCount, double scatter, bool print)
 
 	BVH_updateTreeBounds(node, bodies);
 
-	printf("%d leaf BVH update time: %d ms\n", bodyCount, (clock() - start)*1000 / CLOCKS_PER_SEC);
+	printf("%d leaf BVH update time: %d ms\n\n", bodyCount, (clock() - start)*1000 / CLOCKS_PER_SEC);
 
 	if (print)
 	{

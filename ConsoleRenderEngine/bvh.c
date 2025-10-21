@@ -123,16 +123,18 @@ void BVH_sortMortonCodes(MortonIDPair* mortonIDpair_list, int count)
 		int min = i;
 		for (int j = i + 1; j < count; j++)
 		{
-			if (mortonIDpair_list[i].mortonCode < mortonIDpair_list[j].mortonCode)
+			if (mortonIDpair_list[i].mortonCode > mortonIDpair_list[j].mortonCode)
 			{
-				min = j;
+				MortonIDPair temp = mortonIDpair_list[i];
+				mortonIDpair_list[i] = mortonIDpair_list[j];
+				mortonIDpair_list[j] = temp;
 			}
 		}
 
 		//swap
-		MortonIDPair temp = mortonIDpair_list[i];
-		mortonIDpair_list[i] = mortonIDpair_list[min];
-		mortonIDpair_list[min] = temp;
+		//MortonIDPair temp = mortonIDpair_list[i];
+		//mortonIDpair_list[i] = mortonIDpair_list[min];
+		//mortonIDpair_list[min] = temp;
 	}
 }
 
@@ -175,17 +177,41 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	}
 
 #if _DEBUG || _BENCHMARK
+
+	printf("Morton Codes: \n");
+	for (int n = 0; n < count; n++)
+	{
+		printf("code %u: ", mortonCode_list[n].id);
+		for (int i = sizeof(mortonCode_list[n].mortonCode) * 8 - 1; i >= 0; i--)
+		{
+			printf("%d", (mortonCode_list[n].mortonCode >> i) & 1);
+		}
+		printf("\n");
+	}
+
 	clock_t startsort = clock();
 #endif // _DEBUG || _BENCHMARK
 
 
 	// sort the codes
-	BVH_quicksortMortonCodes(mortonCode_list, 0, count - 1);
-	//BVH_sortMortonCodes(mortonCode_list, count);
+	//BVH_quicksortMortonCodes(mortonCode_list, 0, count - 1);
+	BVH_sortMortonCodes(mortonCode_list, count);
 
 
 #if _DEBUG || _BENCHMARK
 	printf("%d leaf BVH sort time: %d ms\n", count, (clock() - startsort) * 1000 / CLOCKS_PER_SEC);
+
+	printf("Morton Codes: \n");
+	for (int n = 0; n < count; n++)
+	{
+		printf("code %u: ", mortonCode_list[n].id);
+		for (int i = sizeof(mortonCode_list[n].mortonCode) * 8 - 1; i >= 0; i--)
+		{
+			printf("%d", (mortonCode_list[n].mortonCode >> i) & 1);
+		}
+		printf("\n");
+	}
+
 #endif // _DEBUG || _BENCHMARK
 
 	BVHNode* root = BVH_createSubTree(mortonCode_list, bodyBounds_list, 0, count-1);
