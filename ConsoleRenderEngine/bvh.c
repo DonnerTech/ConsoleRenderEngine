@@ -36,7 +36,7 @@ Bounds BVH_calculateBounds(Body body)
 int BVH_getSplitPos(MortonIDPairs* list, int begin, int end)
 {
 	unsigned int firstCode = list->mortonCode[begin];
-	unsigned int lastCode = list->mortonCode[begin];
+	unsigned int lastCode = list->mortonCode[end];
 
 	// If all codes are identical, split in the middle
 	if (firstCode == lastCode)
@@ -63,46 +63,38 @@ int BVH_getSplitPos(MortonIDPairs* list, int begin, int end)
 	return split;
 }
 
-// partition for quick sort
-static int partition(MortonIDPairs* mortonIDpair_list, int low, int high)
+static inline void swap(MortonIDPairs* mortonIDpair_list, int indexA, int indexB)
 {
-	unsigned int pivot = mortonIDpair_list->mortonCode[high];
-	int left = low, right = high - 1;
+	unsigned int temp = mortonIDpair_list->mortonCode[indexA];
+	mortonIDpair_list->mortonCode[indexA] = mortonIDpair_list->mortonCode[indexB];
+	mortonIDpair_list->mortonCode[indexB] = temp;
 
-	while (left < right)
+	temp = mortonIDpair_list->id[indexA];
+	mortonIDpair_list->id[indexA] = mortonIDpair_list->id[indexB];
+	mortonIDpair_list->id[indexB] = temp;
+}
+
+// partition for quick sort
+static int partition(MortonIDPairs* pairs_ptr, int low, int high)
+{
+	unsigned int pivot = pairs_ptr->mortonCode[high];
+	int i = low -1;
+
+	for (int j = low; j <= high - 1; j++)
 	{
-		while (mortonIDpair_list->mortonCode[left] <= pivot && left < right) {
-			left++;
+		if (pairs_ptr->mortonCode[j] < pivot)
+		{
+			i++;
+			swap(pairs_ptr, i, j);
 		}
-		while (mortonIDpair_list->mortonCode[right] >= pivot && left < right) {
-			right--;
-		}
-
-		if (left >= right) {
-			break;
-		}
-		unsigned int temp = mortonIDpair_list->mortonCode[left];
-		mortonIDpair_list->mortonCode[left] = mortonIDpair_list->mortonCode[right];
-		mortonIDpair_list->mortonCode[right] = temp;
-
-		temp = mortonIDpair_list->id[left];
-		mortonIDpair_list->id[left] = mortonIDpair_list->id[right];
-		mortonIDpair_list->id[right] = temp;
 	}
 
-	unsigned int temp = mortonIDpair_list->mortonCode[left];
-	mortonIDpair_list->mortonCode[left] = mortonIDpair_list->mortonCode[high];
-	mortonIDpair_list->mortonCode[high] = temp;
-
-	temp = mortonIDpair_list->id[left];
-	mortonIDpair_list->id[left] = mortonIDpair_list->id[high];
-	mortonIDpair_list->id[high] = temp;
-	return left;
+	swap(pairs_ptr, i+1, high);
+	return i + 1;
 }
 
 // quick sort
-// this is a (tail recursion) ver
-// it sorts the largest partition in a loop
+// this version it sorts the largest partition in a loop
 void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int high)
 {
 	// Use a while loop to handle the larger partition iteratively
@@ -123,6 +115,95 @@ void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int hig
 	}
 }
 
+static void merge(MortonIDPairs* pairs_ptr, int begin, int middle, int end)
+{
+	int i, j, k;
+	int n1 = middle - begin + 1;
+	int n2 = end - middle;
+
+	//allocate arrays
+	MortonIDPairs* left_ptr = malloc(sizeof(MortonIDPairs));
+	if (left_ptr == NULL) return;
+	left_ptr->id = malloc(sizeof(unsigned int) * n1);
+	if (left_ptr->id == NULL) return;
+	left_ptr->mortonCode = malloc(sizeof(unsigned int) * n1);
+	if (left_ptr->mortonCode == NULL) return;
+
+	MortonIDPairs* right_ptr = malloc(sizeof(MortonIDPairs));
+	if (right_ptr == NULL) return;
+	right_ptr->id = malloc(sizeof(unsigned int) * n2);
+	if (right_ptr->id == NULL) return;
+	right_ptr->mortonCode = malloc(sizeof(unsigned int) * n2);
+	if (right_ptr->mortonCode == NULL) return;
+
+	//initalize arrays
+	for (i = 0; i < n1; i++)
+	{
+		left_ptr->id[i] = pairs_ptr->id[begin + i];
+		left_ptr->mortonCode[i] = pairs_ptr->mortonCode[begin + i];
+	}
+
+	for (j = 0; j < n2; j++)
+	{
+		right_ptr->id[j] = pairs_ptr->id[middle + 1 + j];
+		right_ptr->mortonCode[j] = pairs_ptr->mortonCode[middle + 1 + j];
+	}
+
+	// Merge them arrays
+	i = 0;
+	j = 0;
+	k = begin;
+
+	while (i < n1 && j < n2)
+	{
+		if (left_ptr->mortonCode[i] <= right_ptr->mortonCode[j])
+		{
+			pairs_ptr->id[k] = left_ptr->id[i];
+			pairs_ptr->mortonCode[k] = left_ptr->mortonCode[i];
+			i++;
+		}
+		else
+		{
+			pairs_ptr->id[k] = right_ptr->id[j];
+			pairs_ptr->mortonCode[k] = right_ptr->mortonCode[j];
+			j++;
+		}
+		k++;
+	}
+
+	// Copy remaining
+	while (i < n1)
+	{
+		pairs_ptr->id[k] = left_ptr->id[i];
+		pairs_ptr->mortonCode[k] = left_ptr->mortonCode[i];
+		i++;
+		k++;
+	}
+
+	while (j < n2)
+	{
+		pairs_ptr->id[k] = right_ptr->id[j];
+		pairs_ptr->mortonCode[k] = right_ptr->mortonCode[j];
+		j++;
+		k++;
+	}
+}
+
+void BVH_mergesortMortonCodes(MortonIDPairs* mortonIDpair_list, int begin, int end)
+{
+	// single element
+	if (begin < end)
+	{
+		int middle = begin + (end - begin) / 2;
+
+		// sort
+		BVH_mergesortMortonCodes(mortonIDpair_list, begin, middle);
+		BVH_mergesortMortonCodes(mortonIDpair_list, middle + 1, end);
+		
+		merge(mortonIDpair_list, begin, middle, end);
+	}
+}
+
 // selection sort for fun
 void BVH_sortMortonCodes(MortonIDPairs* mortonIDpair_list, int count)
 {
@@ -133,15 +214,7 @@ void BVH_sortMortonCodes(MortonIDPairs* mortonIDpair_list, int count)
 		{
 			if (mortonIDpair_list->mortonCode[i] > mortonIDpair_list->mortonCode[j])
 			{
-				//swap code
-				unsigned int temp = mortonIDpair_list->mortonCode[i];
-				mortonIDpair_list->mortonCode[i] = mortonIDpair_list->mortonCode[j];
-				mortonIDpair_list->mortonCode[j] = temp;
-
-				//swap id
-				temp = mortonIDpair_list->id[i];
-				mortonIDpair_list->id[i] = mortonIDpair_list->id[j];
-				mortonIDpair_list->id[j] = temp;
+				swap(mortonIDpair_list, i, j);
 			}
 		}
 	}
@@ -215,8 +288,9 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 
 
 	// sort the codes
-	//BVH_quicksortMortonCodes(mortonCode_list, 0, count - 1);
-	BVH_sortMortonCodes(mortonIDpair_list, count);
+	//BVH_sortMortonCodes(mortonIDpair_list, count);
+	//BVH_mergesortMortonCodes(mortonIDpair_list, 0, count - 1);
+	BVH_quicksortMortonCodes(mortonIDpair_list, 0, count - 1);
 
 
 #if _DEBUG || _BENCHMARK

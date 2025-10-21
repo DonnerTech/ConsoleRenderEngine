@@ -51,7 +51,8 @@ int main(void)
 
 		testBVHtree(100000, pow(10, i),0);
 
-		// last test it took 51 seconds
+		// O(n^2) sorting took: 51 seconds
+		// merge sort took: 0.655 seconds
 		//testBVHtree(1000000, pow(10, i),0);
 	}
 	
