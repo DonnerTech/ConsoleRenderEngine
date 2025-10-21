@@ -32,22 +32,23 @@ typedef struct BVHNode {
 	struct BVHNode* right_ptr;
 } BVHNode;
 
-typedef struct {
-	unsigned int id;
-	unsigned int mortonCode;
-} MortonIDPair;
+// SoA of ids and morton codes.
+typedef struct MortonIDPairs {
+	unsigned int* id;
+	unsigned int* mortonCode;
+} MortonIDPairs;
 
 Bounds BVH_calculateBounds(Body body);
 
-void BVH_sortMortonCodes(MortonIDPair* mortonIDpair_list, int count);
+void BVH_sortMortonCodes(MortonIDPairs* mortonIDpair_list, int count);
 
-void BVH_quicksortMortonCodes(MortonIDPair* mortonIDpair_list, int low, int high);
+void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int high);
 
-int BVH_getSplitPos(MortonIDPair* mortonIDpair_list, int begin, int end);
+int BVH_getSplitPos(MortonIDPairs* mortonIDpair_list, int begin, int end);
 
 BVHNode* BVH_createTree(Body* body_list, int count);
 
-BVHNode* BVH_createSubTree(MortonIDPair* mortonIDpair_list, Bounds* bounds_list, int begin, int end);
+BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list, int begin, int end);
 
 void BVH_updateTreeBounds(BVHNode* node, Body* body_list);
 

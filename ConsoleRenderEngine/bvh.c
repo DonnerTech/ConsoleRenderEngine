@@ -33,10 +33,10 @@ Bounds BVH_calculateBounds(Body body)
 	}
 }
 
-int BVH_getSplitPos(MortonIDPair* list, int begin, int end)
+int BVH_getSplitPos(MortonIDPairs* list, int begin, int end)
 {
-	unsigned int firstCode = list[begin].mortonCode;
-	unsigned int lastCode = list[end].mortonCode;
+	unsigned int firstCode = list->mortonCode[begin];
+	unsigned int lastCode = list->mortonCode[begin];
 
 	// If all codes are identical, split in the middle
 	if (firstCode == lastCode)
@@ -53,7 +53,7 @@ int BVH_getSplitPos(MortonIDPair* list, int begin, int end)
 		step = (step + 1) >> 1;
 		int newSplit = split + step;
 		if (newSplit < end) {
-			unsigned int splitCode = list[newSplit].mortonCode;
+			unsigned int splitCode = list->mortonCode[newSplit];
 			int prefix = __lzcnt(firstCode ^ splitCode);
 			if (prefix > commonPrefix)
 				split = newSplit;
@@ -64,38 +64,46 @@ int BVH_getSplitPos(MortonIDPair* list, int begin, int end)
 }
 
 // partition for quick sort
-static int partition(MortonIDPair* mortonIDpair_list, int low, int high)
+static int partition(MortonIDPairs* mortonIDpair_list, int low, int high)
 {
-	unsigned int pivot = mortonIDpair_list[high].mortonCode;
+	unsigned int pivot = mortonIDpair_list->mortonCode[high];
 	int left = low, right = high - 1;
 
 	while (left < right)
 	{
-		while (mortonIDpair_list[left].mortonCode <= pivot && left < right) {
+		while (mortonIDpair_list->mortonCode[left] <= pivot && left < right) {
 			left++;
 		}
-		while (mortonIDpair_list[right].mortonCode >= pivot && left < right) {
+		while (mortonIDpair_list->mortonCode[right] >= pivot && left < right) {
 			right--;
 		}
 
 		if (left >= right) {
 			break;
 		}
-		MortonIDPair temp = mortonIDpair_list[left];
-		mortonIDpair_list[left] = mortonIDpair_list[right];
-		mortonIDpair_list[right] = temp;
+		unsigned int temp = mortonIDpair_list->mortonCode[left];
+		mortonIDpair_list->mortonCode[left] = mortonIDpair_list->mortonCode[right];
+		mortonIDpair_list->mortonCode[right] = temp;
+
+		temp = mortonIDpair_list->id[left];
+		mortonIDpair_list->id[left] = mortonIDpair_list->id[right];
+		mortonIDpair_list->id[right] = temp;
 	}
 
-	MortonIDPair temp = mortonIDpair_list[left];
-	mortonIDpair_list[left] = mortonIDpair_list[high];
-	mortonIDpair_list[high] = temp;
+	unsigned int temp = mortonIDpair_list->mortonCode[left];
+	mortonIDpair_list->mortonCode[left] = mortonIDpair_list->mortonCode[high];
+	mortonIDpair_list->mortonCode[high] = temp;
+
+	temp = mortonIDpair_list->id[left];
+	mortonIDpair_list->id[left] = mortonIDpair_list->id[high];
+	mortonIDpair_list->id[high] = temp;
 	return left;
 }
 
 // quick sort
 // this is a (tail recursion) ver
 // it sorts the largest partition in a loop
-void BVH_quicksortMortonCodes(MortonIDPair* mortonIDpair_list, int low, int high)
+void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int high)
 {
 	// Use a while loop to handle the larger partition iteratively
 	while (low < high)
@@ -116,25 +124,26 @@ void BVH_quicksortMortonCodes(MortonIDPair* mortonIDpair_list, int low, int high
 }
 
 // selection sort for fun
-void BVH_sortMortonCodes(MortonIDPair* mortonIDpair_list, int count)
+void BVH_sortMortonCodes(MortonIDPairs* mortonIDpair_list, int count)
 {
 	for (int i = 0; i < count; i++)
 	{
 		int min = i;
 		for (int j = i + 1; j < count; j++)
 		{
-			if (mortonIDpair_list[i].mortonCode > mortonIDpair_list[j].mortonCode)
+			if (mortonIDpair_list->mortonCode[i] > mortonIDpair_list->mortonCode[j])
 			{
-				MortonIDPair temp = mortonIDpair_list[i];
-				mortonIDpair_list[i] = mortonIDpair_list[j];
-				mortonIDpair_list[j] = temp;
+				//swap code
+				unsigned int temp = mortonIDpair_list->mortonCode[i];
+				mortonIDpair_list->mortonCode[i] = mortonIDpair_list->mortonCode[j];
+				mortonIDpair_list->mortonCode[j] = temp;
+
+				//swap id
+				temp = mortonIDpair_list->id[i];
+				mortonIDpair_list->id[i] = mortonIDpair_list->id[j];
+				mortonIDpair_list->id[j] = temp;
 			}
 		}
-
-		//swap
-		//MortonIDPair temp = mortonIDpair_list[i];
-		//mortonIDpair_list[i] = mortonIDpair_list[min];
-		//mortonIDpair_list[min] = temp;
 	}
 }
 
@@ -160,9 +169,19 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	// then generate the code by inverleaving the 10 bit quantized positions
 	// currently hardcoded to 10 bit or 1024 different positions
 	// the interlieved result is 30 bits long. this fits into a uint
-	MortonIDPair* mortonCode_list = malloc(sizeof(MortonIDPair) * count);
+	MortonIDPairs* mortonIDpair_list = malloc(sizeof(MortonIDPairs));
 
-	if (mortonCode_list == NULL)
+	if (mortonIDpair_list == NULL)
+		return NULL;
+
+	mortonIDpair_list->id = malloc(sizeof(unsigned int) * count);
+
+	if (mortonIDpair_list->id == NULL)
+		return NULL;
+
+	mortonIDpair_list->mortonCode = malloc(sizeof(unsigned int) * count);
+
+	if (mortonIDpair_list->mortonCode == NULL)
 		return NULL;
 
 	for (int i = 0; i < count; i++) {
@@ -172,56 +191,64 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 		unsigned int y = QUANTIZE(sceneBounds.min.y, center.y, sceneBounds.max.y);
 		unsigned int z = QUANTIZE(sceneBounds.min.z, center.z, sceneBounds.max.z);
 
-		mortonCode_list[i].id = i;
-		mortonCode_list[i].mortonCode = BVH_mortonCodeGen(x, y, z);
+		mortonIDpair_list->id[i] = i;
+		mortonIDpair_list->mortonCode[i] = BVH_mortonCodeGen(x, y, z);
 	}
 
 #if _DEBUG || _BENCHMARK
 
-	printf("Morton Codes: \n");
-	for (int n = 0; n < count; n++)
+	if (count <= 10)
 	{
-		printf("code %u: ", mortonCode_list[n].id);
-		for (int i = sizeof(mortonCode_list[n].mortonCode) * 8 - 1; i >= 0; i--)
+		printf("Morton Codes: \n");
+		for (int n = 0; n < count; n++)
 		{
-			printf("%d", (mortonCode_list[n].mortonCode >> i) & 1);
+			printf("code %u: ", mortonIDpair_list->id[n]);
+			for (int i = sizeof(mortonIDpair_list->mortonCode[n]) * 8 - 1; i >= 0; i--)
+			{
+				printf("%d", (mortonIDpair_list->mortonCode[n] >> i) & 1);
+			}
+			printf("\n");
 		}
-		printf("\n");
 	}
-
 	clock_t startsort = clock();
 #endif // _DEBUG || _BENCHMARK
 
 
 	// sort the codes
 	//BVH_quicksortMortonCodes(mortonCode_list, 0, count - 1);
-	BVH_sortMortonCodes(mortonCode_list, count);
+	BVH_sortMortonCodes(mortonIDpair_list, count);
 
 
 #if _DEBUG || _BENCHMARK
 	printf("%d leaf BVH sort time: %d ms\n", count, (clock() - startsort) * 1000 / CLOCKS_PER_SEC);
 
-	printf("Morton Codes: \n");
-	for (int n = 0; n < count; n++)
+	if (count <= 10)
 	{
-		printf("code %u: ", mortonCode_list[n].id);
-		for (int i = sizeof(mortonCode_list[n].mortonCode) * 8 - 1; i >= 0; i--)
+		printf("Morton Codes: \n");
+		for (int n = 0; n < count; n++)
 		{
-			printf("%d", (mortonCode_list[n].mortonCode >> i) & 1);
+			printf("code %u: ", mortonIDpair_list->id[n]);
+			for (int i = sizeof(mortonIDpair_list->mortonCode[n]) * 8 - 1; i >= 0; i--)
+			{
+				printf("%d", (mortonIDpair_list->mortonCode[n] >> i) & 1);
+			}
+			printf("\n");
 		}
-		printf("\n");
 	}
 
 #endif // _DEBUG || _BENCHMARK
 
-	BVHNode* root = BVH_createSubTree(mortonCode_list, bodyBounds_list, 0, count-1);
+	BVHNode* root = BVH_createSubTree(mortonIDpair_list, bodyBounds_list, 0, count-1);
 
-	free(mortonCode_list);
+	free(mortonIDpair_list->id);
+	free(mortonIDpair_list->mortonCode);
+	free(mortonIDpair_list);
+
 	free(bodyBounds_list);
 	return root;
 }
 
-BVHNode* BVH_createSubTree(MortonIDPair* mortonIDpair_list, Bounds* bounds_list, int begin, int end)
+BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list, int begin, int end)
 {
 	if (begin > end)
 	{
@@ -241,7 +268,7 @@ BVHNode* BVH_createSubTree(MortonIDPair* mortonIDpair_list, Bounds* bounds_list,
 	if (begin == end)
 	{
 		node->bounds = bounds_list[begin];
-		node->id = mortonIDpair_list[begin].id;
+		node->id = mortonIDpair_list->id[begin];
 		node->left_ptr = NULL;
 		node->right_ptr = NULL;
 	}

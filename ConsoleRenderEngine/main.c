@@ -43,13 +43,13 @@ int main(void)
 	for (int i = 0; i < 3; i++)
 	{
 
-		//testBVHtree(100, pow(10,i),0);
+		testBVHtree(100, pow(10,i),0);
 
-		//testBVHtree(1000, pow(10, i),0);
+		testBVHtree(1000, pow(10, i),0);
 
-		//testBVHtree(10000, pow(10, i),0);
+		testBVHtree(10000, pow(10, i),0);
 
-		//testBVHtree(100000, pow(10, i),0);
+		testBVHtree(100000, pow(10, i),0);
 
 		// last test it took 51 seconds
 		//testBVHtree(1000000, pow(10, i),0);
