@@ -1,3 +1,11 @@
+/* 
+* Author: DonnerTech
+* 
+* Reference material: 
+* https://matthias-research.github.io/pages/tenMinutePhysics/24-morton.pdf
+* https://learn.microsoft.com/en-us/cpp/intrinsics/lzcnt16-lzcnt-lzcnt64?view=msvc-170
+* https://www.programiz.com/dsa/radix-sort
+*/
 #pragma once
 #ifndef BVH_H
 #define BVH_H

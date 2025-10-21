@@ -164,7 +164,7 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 		return NULL;
 
 	for (int i = 0; i < count; i++) {
-		Vector3 center = body_list->position;
+		Vector3 center = body_list[i].position;
 
 		unsigned int x = QUANTIZE(sceneBounds.min.x, center.x, sceneBounds.max.x);
 		unsigned int y = QUANTIZE(sceneBounds.min.y, center.y, sceneBounds.max.y);
@@ -266,14 +266,17 @@ void BVH_freeTree(BVHNode* node)
 
 // DEBUG
 
-void BVH_PrintNode(const BVHNode* node, int depth)
+static void BVH_PrintNode(const BVHNode* node, int depth)
 {
 	if (node == NULL)
 		return;
 
 	// indentation for hierarchy
-	for (int i = 0; i < depth; ++i)
+	for (int i = 0; i < depth-1; ++i)
 		printf("  ");
+
+	if(depth > 0)
+		printf("%c%c", 192, 196);
 
 	// print node info
 	if (node->id == -1)

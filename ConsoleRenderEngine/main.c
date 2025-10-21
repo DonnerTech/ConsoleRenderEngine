@@ -37,10 +37,10 @@ int main(void)
 
 	test_trig_tables();
 
-	testBVHtree(10, 25,1);
+	testBVHtree(10, 25, 1);
 
 	
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 3; i++)
 	{
 
 		testBVHtree(100, pow(10,i),0);
