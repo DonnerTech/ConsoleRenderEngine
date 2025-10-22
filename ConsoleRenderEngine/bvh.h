@@ -34,8 +34,8 @@ typedef struct BVHNode {
 
 // SoA of ids and morton codes.
 typedef struct MortonIDPairs {
-	unsigned int* id;
-	unsigned int* mortonCode;
+	unsigned int id;
+	unsigned int mortonCode;
 } MortonIDPairs;
 
 Bounds BVH_calculateBounds(Body body);
