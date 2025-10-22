@@ -410,11 +410,6 @@ int BVH_traverseTree(BVHNode* root, Ray ray)
 	if (root == NULL)
 		return -1;
 
-	if (root->id != -1)
-	{
-		return root->id;
-	}
-
 	if (ray_aabb(ray, root->bounds.min, root->bounds.max))
 	{
 		int id_l = BVH_traverseTree(root->left_ptr, ray);
@@ -428,7 +423,7 @@ int BVH_traverseTree(BVHNode* root, Ray ray)
 			return id_r;
 	}
 	
-	return -1;
+	return root->id;
 }
 
 void BVH_freeTree(BVHNode* node)

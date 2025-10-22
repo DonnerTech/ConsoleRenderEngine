@@ -15,11 +15,11 @@ void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
 
 int ray_aabb(Ray ray, Vector3 min, Vector3 max)
 {
-	Vector3 pos = vector3_scale(vector3_add(min, max), 0.5);
+	//Vector3 pos = vector3_scale(vector3_add(min, max), 0.5);
 
-	ray.origin = vector3_subtract(ray.origin, pos);
+	//ray.origin = vector3_subtract(ray.origin, pos);
 
-	const Vector3 zero = (Vector3){ 0,0,0 };
+	//const Vector3 zero = (Vector3){ 0,0,0 };
 
 	Vector3 bounds[2];
 	bounds[0] = min; // min

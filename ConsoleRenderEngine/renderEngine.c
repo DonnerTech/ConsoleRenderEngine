@@ -178,93 +178,101 @@ bool rayPlaneIntersection(Body plane, Ray ray, double *dist_ptr, Vector3* localH
 	return true;
 }
 
-void raytrace(BYTE RGBAout[4], Body* bodies, BYTE* textureIDs, Texture* textures, int count, Ray ray)
+void raytrace(BYTE RGBAout[4],BVHNode* BVHroot, Body* bodies, BYTE* textureIDs, Texture* textures, int count, Ray ray)
 {
 
 	double minDist = 1e30;
 	double dist = 0;
 	double* dist_ptr = &dist;
 
-	for (int i = 0; i < count; i++)
-	{
-		if (bodies[i].type == SHAPE_SPHERE)
-		{
-			if (raySphereIntersection(bodies[i], ray, dist_ptr))
-			{
-				if (dist < minDist)
-				{
-					minDist = dist;
+	int i = BVH_traverseTree(BVHroot, ray);
 
-					RGBAout[0] = 50;
-					RGBAout[1] = 50;
+	if (i == -1)
+		return;
+
+	//RGBAout[0] = 0;
+	//RGBAout[1] = 0;
+	//RGBAout[2] = 0;
+	//RGBAout[3] = 255;
+
+	if (bodies[i].type == SHAPE_SPHERE)
+	{
+		if (raySphereIntersection(bodies[i], ray, dist_ptr))
+		{
+			if (dist < minDist)
+			{
+				minDist = dist;
+
+				RGBAout[0] = 50;
+				RGBAout[1] = 50;
+				RGBAout[2] = 200;
+				RGBAout[3] = 255;
+			}
+		}
+	}
+	else if (bodies[i].type == SHAPE_BOX)
+	{
+		Vector3 localHitPoint = { 0 };
+
+		if (rayBoxIntersection(bodies[i], ray, dist_ptr, &localHitPoint))
+		{
+			if (dist < minDist)
+			{
+				minDist = dist;
+				RGBAout[0] = 255;
+				RGBAout[1] = 0;
+				RGBAout[2] = 0;
+				RGBAout[3] = 255;
+
+				// determine which face was hit
+
+				// basic shading
+				if (fabs(localHitPoint.x - bodies[i].box.half_extents.x) < 1e-6) RGBAout[0] = 220;
+				else if (fabs(localHitPoint.x + bodies[i].box.half_extents.x) < 1e-6) RGBAout[0] = 200;
+				else if (fabs(localHitPoint.y - bodies[i].box.half_extents.y) < 1e-6) RGBAout[0] = 180;
+				else if (fabs(localHitPoint.y + bodies[i].box.half_extents.y) < 1e-6) RGBAout[0] = 160;
+				else if (fabs(localHitPoint.z - bodies[i].box.half_extents.z) < 1e-6) RGBAout[0] = 140;
+				else if (fabs(localHitPoint.z + bodies[i].box.half_extents.z) < 1e-6) RGBAout[0] = 120;
+			}
+		}
+	}
+	else if (bodies[i].type == SHAPE_PLANE)
+	{
+		Vector3 localHitPoint = { 0, 0, 0 };
+
+		if (rayPlaneIntersection(bodies[i], ray, dist_ptr, &localHitPoint))
+		{
+			if (dist < minDist)
+			{
+				minDist = dist;
+				texture_sample(textures, (Vector2){ localHitPoint.x, -localHitPoint.z }, RGBAout);
+
+
+				int c = (int)localHitPoint.x - (int)localHitPoint.z;
+
+				if (abs(c) % 2 > 0)
+				{
+					RGBAout[0] = 200;
+					RGBAout[1] = 220;
 					RGBAout[2] = 200;
 					RGBAout[3] = 255;
 				}
 			}
 		}
-		else if (bodies[i].type == SHAPE_BOX)
-		{
-			Vector3 localHitPoint = { 0 };
-
-			if (rayBoxIntersection(bodies[i], ray, dist_ptr, &localHitPoint))
-			{
-				if (dist < minDist)
-				{
-					minDist = dist;
-					RGBAout[0] = 255;
-					RGBAout[1] = 0;
-					RGBAout[2] = 0;
-					RGBAout[3] = 255;
-
-					// determine which face was hit
-
-					// basic shading
-					if (fabs(localHitPoint.x - bodies[i].box.half_extents.x) < 1e-6) RGBAout[0] = 220;
-					else if (fabs(localHitPoint.x + bodies[i].box.half_extents.x) < 1e-6) RGBAout[0] = 200;
-					else if (fabs(localHitPoint.y - bodies[i].box.half_extents.y) < 1e-6) RGBAout[0] = 180;
-					else if (fabs(localHitPoint.y + bodies[i].box.half_extents.y) < 1e-6) RGBAout[0] = 160;
-					else if (fabs(localHitPoint.z - bodies[i].box.half_extents.z) < 1e-6) RGBAout[0] = 140;
-					else if (fabs(localHitPoint.z + bodies[i].box.half_extents.z) < 1e-6) RGBAout[0] = 120;
-				}
-			}
-		}
-		else if (bodies[i].type == SHAPE_PLANE)
-		{
-			Vector3 localHitPoint = { 0, 0, 0 };
-
-			if (rayPlaneIntersection(bodies[i], ray, dist_ptr, &localHitPoint))
-			{
-				if (dist < minDist)
-				{
-					minDist = dist;
-					texture_sample(textures, (Vector2){ localHitPoint.x, -localHitPoint.z }, RGBAout);
-
-
-					int c = (int)localHitPoint.x - (int)localHitPoint.z;
-
-					if (abs(c) % 2 > 0)
-					{
-						RGBAout[0] = 200;
-						RGBAout[1] = 220;
-						RGBAout[2] = 200;
-						RGBAout[3] = 255;
-					}
-				}
-			}
-		}
-		else
-		{
-			// unknown shape
-			RGBAout[0] = 200;
-			RGBAout[1] = 0;
-			RGBAout[2] = 200;
-			RGBAout[3] = 255;
-		}
+	}
+	else
+	{
+		// unknown shape
+		RGBAout[0] = 200;
+		RGBAout[1] = 0;
+		RGBAout[2] = 200;
+		RGBAout[3] = 255;
 	}
 }
 
 typedef struct {
 	Body* bodies;
+	BVHNode* BVHroot;
 	int* textureIDs;
 	Texture* textures;
 	Vector3 camera_pos;
@@ -301,7 +309,7 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 
 		BYTE RGBA[4] = { 0 };
 
-		raytrace(RGBA,args->bodies, args->textureIDs, args->textures, args->count, ray);
+		raytrace(RGBA,args->bodies,args->BVHroot, args->textureIDs, args->textures, args->count, ray);
 
 		for (int j = 0; j < outputFrame.texture.byteCount; j++)
 		{
@@ -318,6 +326,15 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 {
 	rendertimeClock = clock();
 
+	//create bvh tree
+	BVHNode* BVHroot = BVH_createTree(bodies, count-1);
+
+	//BVH_DebugPrint(BVHroot);
+	//system("pause");
+
+	if (BVHroot == NULL)
+		return;
+
 	HANDLE threads[NUM_THREADS];
 
 	// Launch threads
@@ -326,6 +343,7 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 		if (!args) return 1;
 
 		args->bodies = bodies;
+		args->BVHroot = BVHroot;
 		args->textureIDs = textureIDs;
 		args->textures = textures;
 		args->camera_pos = cameraPos;
@@ -356,6 +374,8 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 
 	// Clean up handles
 	for (int i = 0; i < NUM_THREADS; i++) CloseHandle(threads[i]);
+
+	BVH_freeTree(BVHroot);
 
 	return 0;
 }
@@ -460,7 +480,7 @@ void printfFrameTimes(double targetms)
 
 	printf("Other time: %f milliseconds\n", exec_time - render_time);
 
-	printf("Smeep time: %f milliseconds\n", deltaTime - exec_time);
+	printf("Sleep time: %f milliseconds\n", deltaTime - exec_time);
 
 	printf("Delta time: %f miliseconds\n", deltaTime);
 

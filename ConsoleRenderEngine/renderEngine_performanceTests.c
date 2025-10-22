@@ -153,6 +153,18 @@ void testBVHtree(int bodyCount, double scatter, bool print)
 
 	BVH_updateTreeBounds(node, bodies);
 
+	Ray ray;
+	Vector3 dir = vector3_normalize((Vector3) { 0, -1, 1 });
+	create_ray(&ray, (Vector3) { 0, 0, 0 },dir);
+
+	int i = BVH_traverseTree(node, ray);
+	printf("Check Intersection: %d\n", i);
+
+	if (i != -1)
+	{
+		printf("Hit: (%0.2lf, %0.2lf, %0.2lf)\n", bodies[i].position.x, bodies[i].position.y, bodies[i].position.z);
+	}
+
 	printf("%d leaf BVH update time: %d ms\n\n", bodyCount, (clock() - start)*1000 / CLOCKS_PER_SEC);
 
 	if (print)

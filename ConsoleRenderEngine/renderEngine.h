@@ -15,6 +15,7 @@
 #include "body.h"
 #include "ray.h"
 #include "textureLoader.h"
+#include "bvh.h"
 
 #include "fastTrig.h"
 
