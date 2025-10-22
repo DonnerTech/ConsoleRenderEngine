@@ -17,19 +17,6 @@ static clock_t executiontimeClock;
 
 HANDLE co_handle;
 
-// creates a ray from an origin and direction
-void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
-{
-	ray->origin = origin;
-	ray->direction = direction;
-	ray->invdir.x = 1.0 / direction.x;
-	ray->invdir.y = 1.0 / direction.y;
-	ray->invdir.z = 1.0 / direction.z;
-	ray->sign[0] = (ray->invdir.x < 0);
-	ray->sign[1] = (ray->invdir.y < 0);
-	ray->sign[2] = (ray->invdir.z < 0);
-}
-
 //create the new frame in a buffer and push it to the console in one call.
 void winPrintFrame()
 {
@@ -124,7 +111,7 @@ bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPo
 	// Credit to Scratchapixel for the AABB-Ray optimized intersection algorithm
 	// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html
 
-	Vector3 zero = (Vector3){ 0,0,0 };
+	const Vector3 zero = (Vector3){ 0,0,0 };
 
 	Vector3 bounds[2];
 	bounds[0] = vector3_subtract(zero, box.box.half_extents); // min

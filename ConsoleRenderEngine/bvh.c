@@ -405,6 +405,32 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 }
 
+int BVH_traverseTree(BVHNode* root, Ray ray)
+{
+	if (root == NULL)
+		return -1;
+
+	if (root->id != -1)
+	{
+		return root->id;
+	}
+
+	if (ray_aabb(ray, root->bounds.min, root->bounds.max))
+	{
+		int id_l = BVH_traverseTree(root->left_ptr, ray);
+
+		if (id_l != -1)
+			return id_l;
+
+		int id_r = BVH_traverseTree(root->right_ptr, ray);
+
+		if (id_r != -1)
+			return id_r;
+	}
+	
+	return -1;
+}
+
 void BVH_freeTree(BVHNode* node)
 {
 	if (node == NULL) return;
@@ -457,7 +483,6 @@ static void BVH_PrintNode(const BVHNode* node, int depth)
 	}
 }
 
-// convenience wrapper
 void BVH_DebugPrint(const BVHNode* root)
 {
 	printf("======== BVH Tree ========\n");

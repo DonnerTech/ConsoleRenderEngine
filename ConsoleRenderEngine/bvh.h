@@ -15,8 +15,10 @@
 
 #include <intrin.h>
 #include <math.h>
+
 #include "vector3.h"
 #include "body.h"
+#include "ray.h"
 
 // for quantizing spatial positions into virtual cells (10 bit)
 #define QUANTIZE(min, center, max) (unsigned int)((center - min) / (max - min) * (1024 - 1))
@@ -60,6 +62,8 @@ BVHNode* BVH_createTree(Body* body_list, int count);
 BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list, int begin, int end);
 
 void BVH_updateTreeBounds(BVHNode* node, Body* body_list);
+
+int BVH_traverseTree(BVHNode* root, Ray ray);
 
 void BVH_freeTree(BVHNode* node);
 

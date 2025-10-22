@@ -12,9 +12,8 @@
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
 #include "quaternion.h"
-
 #include "body.h"
-
+#include "ray.h"
 #include "textureLoader.h"
 
 #include "fastTrig.h"
@@ -25,18 +24,7 @@ typedef struct {
 
 } Frame;
 
-typedef struct {
-	Vector3 origin;
-	Vector3 direction;
-
-	Vector3 invdir; // 1.0 / direction
-
-	int sign[3]; // sign for each axis
-} Ray;
-
 double deltaTime;
-
-void create_ray(Ray* ray, Vector3 origin, Vector3 direction);
 
 bool raySphereIntersection(Body sphere, Ray ray, double* dist_ptr);
 

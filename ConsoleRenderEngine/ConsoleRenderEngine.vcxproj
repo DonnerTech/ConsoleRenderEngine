@@ -193,6 +193,7 @@
     <ClCompile Include="physicsEngine.c" />
     <ClCompile Include="physicsTest.c" />
     <ClCompile Include="quaternion.c" />
+    <ClCompile Include="ray.c" />
     <ClCompile Include="renderEngine.c" />
     <ClCompile Include="renderEngine_performanceTests.c" />
     <ClCompile Include="texture.c">
@@ -212,6 +213,7 @@
     <ClInclude Include="physicsEngine.h" />
     <ClInclude Include="physicsTest.h" />
     <ClInclude Include="quaternion.h" />
+    <ClInclude Include="ray.h" />
     <ClInclude Include="renderEngine.h" />
     <ClInclude Include="body.h" />
     <ClInclude Include="renderEngine_performanceTests.h" />
