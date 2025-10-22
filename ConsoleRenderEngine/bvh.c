@@ -104,8 +104,8 @@ static int partition(MortonIDPairs* pairs_ptr, int low, int high)
 void BVH_quicksortMortonCodes_L(MortonIDPairs* mortonIDpair_list, int low, int high)
 {
 	// Use a while loop to handle the larger partition iteratively
-	// use insertion sort on the last 20
-	while (high - low > 20 )
+	// use insertion sort on the last few iterations is faster
+	while (high - low > 50 )
 	{
 		int pivotPosition = partition(mortonIDpair_list, low, high);
 
@@ -131,7 +131,7 @@ void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int hig
 	if (low < high)
 	{
 		// opt for insertion sort over recursive quick sorting
-		if (high - low < 20)
+		if (high - low < 50)
 		{
 			BVH_insertionsortMortonCodes(mortonIDpair_list, low, high);
 			return;
@@ -238,8 +238,8 @@ void BVH_mergesortMortonCodes(MortonIDPairs* mortonIDpair_list, int begin, int e
 	}
 }
 
-// selection sort for fun
-void BVH_sortMortonCodes(MortonIDPairs* mortonIDpair_list, int count)
+// selection sort for fun: O(n^2) time
+void BVH_selectionsortMortonCodes(MortonIDPairs* mortonIDpair_list, int count)
 {
 	for (int i = 0; i < count; i++)
 	{
@@ -339,8 +339,6 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 
 	BVHNode* root = BVH_createSubTree(mortonIDpair_list, bodyBounds_list, 0, count-1);
 
-	//free(mortonIDpair_list->id);
-	//free(mortonIDpair_list->mortonCode);
 	free(mortonIDpair_list);
 
 	free(bodyBounds_list);

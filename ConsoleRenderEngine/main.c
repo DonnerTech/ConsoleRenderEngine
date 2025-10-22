@@ -40,19 +40,20 @@ int main(void)
 	testBVHtree(10, 25, 1);
 
 	
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 3; i++)
 	{
 
 		//testBVHtree(100, pow(10,i),0);
 
 		//testBVHtree(1000, pow(10, i),0);
 
-		//testBVHtree(10000, pow(10, i),0);
+		testBVHtree(10000, pow(10, i),0);
 
-		//testBVHtree(100000, pow(10, i),0);
+		testBVHtree(100000, pow(10, i),0);
 
-		// O(n^2) sorting took: 51 seconds
+		// selection sort took: 51 seconds
 		// merge sort took: 0.655 seconds
+		// quick sort took: 0.045 seconds
 		testBVHtree(1000000, pow(10, i),0);
 	}
 	

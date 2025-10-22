@@ -5,6 +5,9 @@
 * https://matthias-research.github.io/pages/tenMinutePhysics/24-morton.pdf
 * https://learn.microsoft.com/en-us/cpp/intrinsics/lzcnt16-lzcnt-lzcnt64?view=msvc-170
 * https://www.programiz.com/dsa/radix-sort
+* https://www.geeksforgeeks.org/dsa/quick-sort-algorithm/
+* https://www.geeksforgeeks.org/dsa/tail-recursion/
+* https://www.cs.cornell.edu/courses/JavaAndDS/files/sort3Quicksort3.pdf
 */
 #pragma once
 #ifndef BVH_H
@@ -40,11 +43,15 @@ typedef struct MortonIDPairs {
 
 Bounds BVH_calculateBounds(Body body);
 
-void BVH_sortMortonCodes(MortonIDPairs* mortonIDpair_list, int count);
+void BVH_quicksortMortonCodes_L(MortonIDPairs* mortonIDpair_list, int low, int high);
 
 void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int high);
 
+void BVH_mergesortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int high);
+
 void BVH_insertionsortMortonCodes(MortonIDPairs* mortonIDpair_list, int begin, int end);
+
+void BVH_selectionsortMortonCodes(MortonIDPairs* mortonIDpair_list, int count);
 
 int BVH_getSplitPos(MortonIDPairs* mortonIDpair_list, int begin, int end);
 
