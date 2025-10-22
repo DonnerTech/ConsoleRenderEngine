@@ -44,6 +44,8 @@ void BVH_sortMortonCodes(MortonIDPairs* mortonIDpair_list, int count);
 
 void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int high);
 
+void BVH_insertionsortMortonCodes(MortonIDPairs* mortonIDpair_list, int begin, int end);
+
 int BVH_getSplitPos(MortonIDPairs* mortonIDpair_list, int begin, int end);
 
 BVHNode* BVH_createTree(Body* body_list, int count);
