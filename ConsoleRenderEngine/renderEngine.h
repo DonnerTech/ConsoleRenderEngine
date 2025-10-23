@@ -2,7 +2,6 @@
 #ifndef RENDER_ENGINE_H
 #define RENDER_ENGINE_H
 
-#include <stdbool.h> // booleans
 #include <stdio.h> // I/O
 #include <stdlib.h> // memory allocation
 #include <math.h>
@@ -27,13 +26,9 @@ typedef struct {
 
 double deltaTime;
 
-bool raySphereIntersection(Body sphere, Ray ray, double* dist_ptr);
-
-bool rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint);
-
-bool rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHitPoint);
-
 int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
+
+int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
 int init(int w, int h);
 

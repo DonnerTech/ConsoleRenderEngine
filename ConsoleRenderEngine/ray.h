@@ -3,6 +3,7 @@
 #define RAY_H
 
 #include "vector3.h"
+#include "body.h"
 
 typedef struct {
 	Vector3 origin;
@@ -15,7 +16,9 @@ typedef struct {
 
 void create_ray(Ray* ray, Vector3 origin, Vector3 direction);
 
-int ray_aabb(Ray ray, Vector3 pos, Vector3 half_extents);
+int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax_limit, double* dist_ptr);
+
+double intersectBody(Body body, Ray ray);
 
 #endif // RAY_H
 

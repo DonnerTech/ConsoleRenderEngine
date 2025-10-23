@@ -105,7 +105,7 @@ void BVH_quicksortMortonCodes_L(MortonIDPairs* mortonIDpair_list, int low, int h
 {
 	// Use a while loop to handle the larger partition iteratively
 	// use insertion sort on the last few iterations is faster
-	while (high - low > 50 )
+	while (high - low > 4 )
 	{
 		int pivotPosition = partition(mortonIDpair_list, low, high);
 
@@ -131,7 +131,7 @@ void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int hig
 	if (low < high)
 	{
 		// opt for insertion sort over recursive quick sorting
-		if (high - low < 50)
+		if (high - low < 4)
 		{
 			BVH_insertionsortMortonCodes(mortonIDpair_list, low, high);
 			return;
@@ -267,6 +267,13 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 
 	for (int i = 1; i < count; i++) {
 		bodyBounds_list[i] = BVH_calculateBounds(body_list[i]);
+
+		// skip 0 bound bodies
+		//if (bodyBounds_list[i].max.x == 0 && bodyBounds_list[i].max.y == 0 && bodyBounds_list[i].max.z == 0)
+		//{
+		//	continue;
+		//}
+
 		sceneBounds.min = vector3_min(sceneBounds.min, bodyBounds_list[i].min);
 		sceneBounds.max = vector3_max(sceneBounds.max, bodyBounds_list[i].max);
 	}
@@ -290,6 +297,9 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 
 		mortonIDpair_list[i].id = i;
 		mortonIDpair_list[i].mortonCode = BVH_mortonCodeGen(x, y, z);
+
+		//if (bodyBounds_list[i].max.x == 0 && bodyBounds_list[i].max.y == 0 && bodyBounds_list[i].max.z == 0)
+		//	mortonIDpair_list[i].id = -1;
 	}
 
 #if _DEBUG || _BENCHMARK
@@ -387,7 +397,7 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	if (node == NULL)
 	{
 		printf("Invalid node in updateTreeBounds\n");
-		return NULL;
+		return;
 	}
 
 	// branch node
@@ -405,26 +415,63 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 }
 
-int BVH_traverseTree(BVHNode* root, Ray ray)
+RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, double tmax_limit)
 {
-	if (root == NULL)
-		return -1;
+	RayHit bestHit = (RayHit){ tmax_limit, -1 };
+	if (!node) return bestHit;
 
-	if (ray_aabb(ray, root->bounds.min, root->bounds.max))
-	{
-		int id_l = BVH_traverseTree(root->left_ptr, ray);
+	double t_entry;
+	if (!ray_aabb(*ray, node->bounds.min, node->bounds.max, tmax_limit, &t_entry))
+		return bestHit;
 
-		if (id_l != -1)
-			return id_l;
+	// Leaf node
+	if (node->id != -1) {
 
-		int id_r = BVH_traverseTree(root->right_ptr, ray);
-
-		if (id_r != -1)
-			return id_r;
+		// body intersection
+		double dist = intersectBody(bodies[node->id], *ray);
+		if (dist > 0.0f && dist < bestHit.dist) {
+			bestHit.dist = dist;
+			bestHit.hit_id = node->id;
+		}
+		return bestHit;
 	}
-	
-	return root->id;
+
+	// Internal node — test children near-first
+	double tLeft = 1e30, tRight = 1e30;
+	int hitLeft = node->left_ptr && ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, bestHit.dist, &tLeft);
+	int hitRight = node->right_ptr && ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, bestHit.dist, &tRight);
+
+	const BVHNode* first = node->left_ptr;
+	const BVHNode* second = node->right_ptr;
+
+	if (hitLeft && hitRight) {
+		if (tRight < tLeft) {
+			double tmp = tLeft; tLeft = tRight; tRight = tmp;
+			const BVHNode* tmpn = first; first = second; second = tmpn;
+		}
+		RayHit h1 = BVH_traverse(first, ray, bodies, bestHit.dist);
+		if (h1.hit_id != -1) bestHit = h1;
+
+		// Early-out: if first hit is closer than tRight, skip second
+		if (bestHit.dist < tRight)
+			return bestHit;
+
+		RayHit h2 = BVH_traverse(second, ray, bodies, bestHit.dist);
+		if (h2.hit_id != -1 && h2.dist < bestHit.dist)
+			bestHit = h2;
+
+		return bestHit;
+	}
+
+	// Only one child hit
+	if (hitLeft)
+		return BVH_traverse(node->left_ptr, ray, bodies, bestHit.dist);
+	if (hitRight)
+		return BVH_traverse(node->right_ptr, ray, bodies, bestHit.dist);
+
+	return bestHit;
 }
+
 
 void BVH_freeTree(BVHNode* node)
 {

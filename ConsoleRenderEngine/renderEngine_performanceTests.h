@@ -12,6 +12,6 @@ void testRayBox(int iter);
 
 void testRayPlane(int iter);
 
-void testBVHtree(int bodyCount, double scatter, bool print);
+void testBVHtree(int bodyCount, double scatter, int print);
 
 #endif // RE_PTESTS_H

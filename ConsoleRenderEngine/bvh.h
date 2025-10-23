@@ -63,7 +63,12 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 
 void BVH_updateTreeBounds(BVHNode* node, Body* body_list);
 
-int BVH_traverseTree(BVHNode* root, Ray ray);
+typedef struct {
+	double dist;
+	int hit_id;
+} RayHit;
+
+RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, double tmax_limit);
 
 void BVH_freeTree(BVHNode* node);
 
