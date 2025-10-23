@@ -72,6 +72,7 @@ static inline void swap(MortonIDPairs* mortonIDpair_list, int indexA, int indexB
 
 static void medianThreeSwap(MortonIDPairs* pairs, unsigned int a, unsigned int b, unsigned int c, int i0, int i1, int i2)
 {
+	// XOR
 	if ((a > b) ^ (a > c))
 		swap(pairs, i0, i2);
 	else if ((b < a) ^ (b < c))
@@ -415,21 +416,26 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 }
 
-RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, double tmax_limit)
+RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, double max_dist)
 {
-	RayHit bestHit = (RayHit){ tmax_limit, -1 };
+	nodesVisited++;
+
+	// if the node is null then exit
+	RayHit bestHit = (RayHit){ max_dist, -1 };
 	if (!node) return bestHit;
 
+	// if the ray missed the bounding box than exit
 	double t_entry;
-	if (!ray_aabb(*ray, node->bounds.min, node->bounds.max, tmax_limit, &t_entry))
+	if (!ray_aabb(*ray, node->bounds.min, node->bounds.max, max_dist, &t_entry))
 		return bestHit;
 
-	// Leaf node
+	// Leaf node processing
 	if (node->id != -1) {
+		leavesVisited++;
 
 		// body intersection
 		double dist = intersectBody(bodies[node->id], *ray);
-		if (dist > 0.0f && dist < bestHit.dist) {
+		if (dist > 0 && dist < bestHit.dist) {
 			bestHit.dist = dist;
 			bestHit.hit_id = node->id;
 		}
@@ -450,7 +456,8 @@ RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, double tm
 			const BVHNode* tmpn = first; first = second; second = tmpn;
 		}
 		RayHit h1 = BVH_traverse(first, ray, bodies, bestHit.dist);
-		if (h1.hit_id != -1) bestHit = h1;
+		if (h1.hit_id != -1 && h1.dist < bestHit.dist)
+			bestHit = h1;
 
 		// Early-out: if first hit is closer than tRight, skip second
 		if (bestHit.dist < tRight)

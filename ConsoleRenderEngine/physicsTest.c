@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 500
+#define BODY_COUNT 1000
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -12,13 +12,13 @@ void physics_test(void)
 	PhysicsWorld world;
 
 	// initialize the world with earth's gravity
-	physicsWorld_Init(&world, (Vector3) { 0.0, 9.81, 0.0 });
+	physicsWorld_Init(&world, (Vector3) { 0.0, 0.0981, 0.0 });
 	
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
 		// creates a sphere
 		double size = 0.2;
-		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - size * i, 2.0 }, vector3_scale(vector3_random(), 0.05));
+		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - size * i, 2.0 }, vector3_scale(vector3_random(), 5.5));
 
 		RigidBody sphere = rb_create_sphere(position, size, 1.0);
 		sphere.restitution = 1;

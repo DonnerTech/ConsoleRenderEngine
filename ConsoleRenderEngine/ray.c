@@ -25,7 +25,7 @@ int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax_limit, double *dist_
 	bounds[0] = min; // min
 	bounds[1] = max; // max
 
-	double tmin, tmax = tmax_limit, tymin, tymax, tzmin, tzmax;
+	double tmin, tmax, tymin, tymax, tzmin, tzmax;
 
 	tmin = (bounds[ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
 	tmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
@@ -53,12 +53,12 @@ int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax_limit, double *dist_
 
 	// Compute intersection distance
 
-	if (tmax < 0)
-	{
-		return 0; // no hit
-	}
+	// prune
+	if (tmin > tmax_limit) return 0;
 
-	if(tmin > 0)
+	if (tmin < 0)
+		*dist_ptr = tmax; // inside box
+	else
 		*dist_ptr = tmin; // first hit
 
 	return 1;
@@ -77,6 +77,7 @@ int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
 	double a = fast_sin(angle) * direct_dist;
 	if (a < sphere.sphere.radius && fast_cos(angle) > 0)
 	{
+
 		return 1;
 	}
 
@@ -171,7 +172,7 @@ int rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHi
 
 double intersectBody(Body body, Ray ray)
 {
-	double dist = -1;
+	double dist = 1e30;
 
 	if (body.type == SHAPE_SPHERE)
 	{
@@ -192,12 +193,12 @@ double intersectBody(Body body, Ray ray)
 	else if (body.type == SHAPE_PLANE)
 	{
 		// not  in a bvh
-		dist = -1;
+		return dist;
 	}
 	else
 	{
 		// unknown shape
-		dist =  -1;
+		return dist;
 	}
 
 	return dist;

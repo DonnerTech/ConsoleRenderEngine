@@ -75,57 +75,70 @@ void winPrintFrame()
 
 void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs, Texture* textures, int count, Ray ray)
 {
+	const double depthScalar = 6e-1;
 
 	RayHit i = BVH_traverse(BVHroot, &ray, bodies, 1e30);
 
-	double minDist = i.dist;
+	Vector3 localHitPoint = { 0 };
+	double minDist = 1e30;
+	double dist = 0;
 
-	if (i.hit_id == -1)
+	// inside hvh
+	if (i.hit_id != -1)
 	{
-		// handle planes (not in bvh)
-		for (int i = 0; i < count; i++)
+		if (bodies[i.hit_id].type == SHAPE_SPHERE && raySphereIntersection(bodies[i.hit_id], ray, &dist))
 		{
+			minDist = dist;
 
-			if (bodies[i].type != SHAPE_PLANE) continue;
+			//RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			//RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			//RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			RGBAout[0] = 20;
+			RGBAout[1] = 20;
+			RGBAout[2] = 200;
+			RGBAout[3] = 255;
+			return;
+		}
+		else if (bodies[i.hit_id].type == SHAPE_BOX /*&& rayBoxIntersection(bodies[i.hit_id], ray, &dist, &localHitPoint)*/)
+		{
+			minDist = dist;
 
-			Vector3 localHitPoint = { 0, 0, 0 };
-			double dist = 0;
+			RGBAout[0] = 20;
+			RGBAout[1] = 200;
+			RGBAout[2] = 20;
+			RGBAout[3] = 255;
+			return;
+		}
+	}
 
-			if (rayPlaneIntersection(bodies[i], ray, &dist, &localHitPoint) && dist < minDist)
+	// handle planes (not in bvh)
+	for (int i = 0; i < count; i++)
+	{
+
+		if (bodies[i].type != SHAPE_PLANE) continue;
+
+		Vector3 localHitPoint = { 0, 0, 0 };
+
+
+		if (rayPlaneIntersection(bodies[i], ray, &dist, &localHitPoint) && dist < minDist)
+		{
+			minDist = dist;
+			//texture_sample(textures, (Vector2) { localHitPoint.x, -localHitPoint.z }, RGBAout);
+
+
+			if (abs((int)localHitPoint.x - localHitPoint.z) % 20 > 0 && abs((int)localHitPoint.z + localHitPoint.x) % 20 > 0)
 			{
-				minDist = dist;
-				texture_sample(textures, (Vector2) { localHitPoint.x, -localHitPoint.z }, RGBAout);
-
-
-				int c = (int)localHitPoint.x - (int)localHitPoint.z;
-
-				if (abs(c) % 2 > 0)
-				{
-					RGBAout[0] = 200;
-					RGBAout[1] = 220;
-					RGBAout[2] = 200;
-					RGBAout[3] = 255;
-				}
+				RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
+				RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
+				RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
+				RGBAout[3] = 255;
 			}
 		}
+	}
 
-		return;
-	}
-	else if (bodies[i.hit_id].type == SHAPE_SPHERE)
-	{
-		RGBAout[0] = 20;
-		RGBAout[1] = 20;
-		RGBAout[2] = 200;
-		RGBAout[3] = 255;
-	}
-	else if (bodies[i.hit_id].type == SHAPE_BOX)
-	{
-		RGBAout[0] = 20;
-		RGBAout[1] = 200;
-		RGBAout[2] = 20;
-		RGBAout[3] = 255;
-	}
+	return;
 }
+
 
 typedef struct {
 	Body* bodies;
@@ -397,6 +410,9 @@ void printfFrameTimes(double targetms)
 	printf("Sleep time: %f milliseconds\n", deltaTime - exec_time);
 
 	printf("Delta time: %f miliseconds\n", deltaTime);
+
+	printf("Nodes visited: %d, Leaves visited: %d\n",nodesVisited, leavesVisited);
+	nodesVisited = leavesVisited = 0;
 
 	if (exec_time < targetms && exec_time > 0)
 		Sleep(targetms - (int)exec_time); // 16ms per frame = 60 fps

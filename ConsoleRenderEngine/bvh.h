@@ -23,6 +23,10 @@
 // for quantizing spatial positions into virtual cells (10 bit)
 #define QUANTIZE(min, center, max) (unsigned int)((center - min) / (max - min) * (1024 - 1))
 
+
+int nodesVisited;
+int leavesVisited;
+
 typedef struct {
 	Vector3 min;
 	Vector3 max;
