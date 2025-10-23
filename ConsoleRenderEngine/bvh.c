@@ -416,67 +416,94 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 }
 
-RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, double max_dist)
+//https://research.nvidia.com/sites/default/files/pubs/2010-06_Restart-Trail-for/laine2010hpg_paper.pdf
+
+// returns a boolian checking the trailbit at an index
+static inline char bitCheck(unsigned long *trailBits, unsigned int i)
 {
-	nodesVisited++;
+	return (*trailBits & (1UL << i)) != 0;
+}
 
-	// if the node is null then exit
-	RayHit bestHit = (RayHit){ max_dist, -1 };
-	if (!node) return bestHit;
+static inline void bitSet(unsigned long* trailBits, unsigned int i)
+{
+	*trailBits |= (1UL << i);
+}
 
-	// if the ray missed the bounding box than exit
-	double t_entry;
-	if (!ray_aabb(*ray, node->bounds.min, node->bounds.max, max_dist, &t_entry))
-		return bestHit;
+static inline void bitClear(unsigned long* trailBits, unsigned int i)
+{
+	*trailBits &= ~(1UL << i);
+}
 
-	// Leaf node processing
-	if (node->id != -1) {
-		leavesVisited++;
+RayHit BVH_traverse(const BVHNode* root, const Ray* ray, Body* bodies)
+{
+	//nodesVisited++;
+	//leavesVisited++;
 
-		// body intersection
-		double dist = intersectBody(bodies[node->id], *ray);
-		if (dist > 0 && dist < bestHit.dist) {
-			bestHit.dist = dist;
-			bestHit.hit_id = node->id;
+	BVHNode* node = root;
+	unsigned long trailBits = 0;
+	unsigned int level = 0;
+	unsigned int popLevel = 0; //NONE
+
+	double ray_distance = 1e30;
+
+	char run = 1;
+
+	while (run)
+	{
+		while (node->id == -1 && run)
+		{
+			// intersect ray against children of node
+			RayHit child_a = (RayHit){ 1e30, -1 };
+			if (node->left_ptr)
+			{
+				if (ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, ray_distance, &child_a.dist))
+				{
+					child_a.hit_id = node->left_ptr->id;
+				}
+			}
+
+			RayHit child_b = (RayHit){ 1e30, -1 };
+			if (node->right_ptr)
+			{
+				if (ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, ray_distance, &child_b.dist))
+				{
+					child_b.hit_id = node->right_ptr->id;
+				}
+			}
+
+			// if both children intersected
+			if (child_a.hit_id != -1 && child_b.hit_id != -1)
+			{
+				BVHNode* near = (child_a.dist < child_b.dist) ? node->left_ptr : node->right_ptr;
+				BVHNode* far = (child_a.dist > child_b.dist) ? node->left_ptr : node->right_ptr;
+
+				level++;
+
+				if (bitCheck(&trailBits, level))
+				{
+					node = near;
+				}
+				else
+				{
+					node = far;
+					pop(node, &trailBits, &level, &popLevel);
+				}
+			}
+			else // if one child was intersected
+			{
+
+			}
 		}
-		return bestHit;
 	}
 
-	// Internal node — test children near-first
-	double tLeft = 1e30, tRight = 1e30;
-	int hitLeft = node->left_ptr && ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, bestHit.dist, &tLeft);
-	int hitRight = node->right_ptr && ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, bestHit.dist, &tRight);
+}
 
-	const BVHNode* first = node->left_ptr;
-	const BVHNode* second = node->right_ptr;
+// returns false if it is time to terminate traversal
+static char pop(BVHNode* node_ptr, unsigned long *trialBits_ptr, unsigned int *level_ptr, unsigned int *popLevel_ptr)
+{
 
-	if (hitLeft && hitRight) {
-		if (tRight < tLeft) {
-			double tmp = tLeft; tLeft = tRight; tRight = tmp;
-			const BVHNode* tmpn = first; first = second; second = tmpn;
-		}
-		RayHit h1 = BVH_traverse(first, ray, bodies, bestHit.dist);
-		if (h1.hit_id != -1 && h1.dist < bestHit.dist)
-			bestHit = h1;
 
-		// Early-out: if first hit is closer than tRight, skip second
-		if (bestHit.dist < tRight)
-			return bestHit;
-
-		RayHit h2 = BVH_traverse(second, ray, bodies, bestHit.dist);
-		if (h2.hit_id != -1 && h2.dist < bestHit.dist)
-			bestHit = h2;
-
-		return bestHit;
-	}
-
-	// Only one child hit
-	if (hitLeft)
-		return BVH_traverse(node->left_ptr, ray, bodies, bestHit.dist);
-	if (hitRight)
-		return BVH_traverse(node->right_ptr, ray, bodies, bestHit.dist);
-
-	return bestHit;
+	return 0;
 }
 
 

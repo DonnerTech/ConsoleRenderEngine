@@ -77,7 +77,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 {
 	const double depthScalar = 6e-1;
 
-	RayHit i = BVH_traverse(BVHroot, &ray, bodies, 1e30);
+	RayHit i = BVH_traverse(BVHroot, &ray, bodies);
 
 	Vector3 localHitPoint = { 0 };
 	double minDist = 1e30;
@@ -86,16 +86,16 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 	// inside hvh
 	if (i.hit_id != -1)
 	{
-		if (bodies[i.hit_id].type == SHAPE_SPHERE && raySphereIntersection(bodies[i.hit_id], ray, &dist))
+		if (bodies[i.hit_id].type == SHAPE_SPHERE /*&& raySphereIntersection(bodies[i.hit_id], ray, &dist)*/)
 		{
 			minDist = dist;
 
-			//RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
-			//RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
-			//RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
-			RGBAout[0] = 20;
-			RGBAout[1] = 20;
-			RGBAout[2] = 200;
+			RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			//RGBAout[0] = 20;
+			//RGBAout[1] = 20;
+			//RGBAout[2] = 200;
 			RGBAout[3] = 255;
 			return;
 		}

@@ -72,7 +72,7 @@ typedef struct {
 	int hit_id;
 } RayHit;
 
-RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, double tmax_limit);
+RayHit BVH_traverse(const BVHNode* root, const Ray* ray, const Body* bodies);
 
 void BVH_freeTree(BVHNode* node);
 

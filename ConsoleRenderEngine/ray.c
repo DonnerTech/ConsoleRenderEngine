@@ -13,55 +13,28 @@ void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
 	ray->sign[2] = (ray->invdir.z < 0);
 }
 
-int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax_limit, double *dist_ptr)
+int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax, double *dist_ptr)
 {
-	//Vector3 pos = vector3_scale(vector3_add(min, max), 0.5);
-
-	//ray.origin = vector3_subtract(ray.origin, pos);
-
-	//const Vector3 zero = (Vector3){ 0,0,0 };
+	//Based on: Robust BVH Ray Traversal by Thiago Ize & Solid Angle
 
 	Vector3 bounds[2];
 	bounds[0] = min; // min
 	bounds[1] = max; // max
 
-	double tmin, tmax, tymin, tymax, tzmin, tzmax;
-
-	tmin = (bounds[ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
-	tmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
+	double tmin = 0, txmin, txmax, tymin, tymax, tzmin, tzmax;
+	txmin = (bounds[ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
+	txmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
 	tymin = (bounds[ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
 	tymax = (bounds[1 - ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
-
-	if ((tmin > tymax) || (tymin > tmax))
-		return 0;
-
-	if (tymin > tmin)
-		tmin = tymin;
-	if (tymax < tmax)
-		tmax = tymax;
-
 	tzmin = (bounds[ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
 	tzmax = (bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
+	tmin = max(tzmin, max(tymin, max(txmin, tmin)));
+	tmax = min(tzmax, min(tymax, min(txmax, tmax)));
+	tmax *= 1.00000024;
 
-	if ((tmin > tzmax) || (tzmin > tmax))
-		return 0;
+	*dist_ptr = tmin;
 
-	if (tzmin > tmin)
-		tmin = tzmin;
-	if (tzmax < tmax)
-		tmax = tzmax;
-
-	// Compute intersection distance
-
-	// prune
-	if (tmin > tmax_limit) return 0;
-
-	if (tmin < 0)
-		*dist_ptr = tmax; // inside box
-	else
-		*dist_ptr = tmin; // first hit
-
-	return 1;
+	return tmin <= tmax;
 }
 
 int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
