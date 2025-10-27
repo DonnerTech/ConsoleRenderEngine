@@ -517,7 +517,7 @@ RayHit BVH_traverse(const BVHNode* root, const Ray* ray, Body* bodies)
 		leavesVisited++;
 #endif
 		//intersect the ray against primatives in the current node (30)
-		int dist = intersectBody(bodies[node->id], *ray);
+		double dist = intersectBody(bodies[node->id], *ray);
 
 		if (dist < output.dist)
 		{
