@@ -8,6 +8,9 @@
 * https://www.geeksforgeeks.org/dsa/quick-sort-algorithm/
 * https://www.geeksforgeeks.org/dsa/tail-recursion/
 * https://www.cs.cornell.edu/courses/JavaAndDS/files/sort3Quicksort3.pdf
+* 
+* Ray Traversal algorithm based on:
+* https://research.nvidia.com/sites/default/files/pubs/2010-06_Restart-Trail-for/laine2010hpg_paper.pdf
 */
 #pragma once
 #ifndef BVH_H
@@ -67,12 +70,52 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 
 void BVH_updateTreeBounds(BVHNode* node, Body* body_list);
 
+#define NO_HIT -2
+
 typedef struct {
 	double dist;
 	int hit_id;
 } RayHit;
 
+#define MAX_SHORT_STACK_SIZE 4
+typedef struct {
+	BVHNode* nodeStack[MAX_SHORT_STACK_SIZE];
+	unsigned int count;
+} ShortStack;
+
+/* trail bits stored in an unsigned long (64-bit on common platforms) */
+static inline char bitCheck(unsigned long trailBits, unsigned int i)
+{
+	return (i < (sizeof(unsigned long) * 8)) && ((trailBits & (1UL << i)) != 0);
+}
+
+static inline void bitSet(unsigned long* trailBits, unsigned int i)
+{
+	if (i < (sizeof(unsigned long) * 8)) *trailBits |= (1UL << i);
+}
+
+static inline void bitClear(unsigned long* trailBits, unsigned int i)
+{
+	*trailBits &= ~(1UL << i);
+}
+
+//Based on the paper: Restart Trail for Stackless BVH Traversal
+//BVH_traverse(...) traverses a bvh tree and returns a RayHit
+//if no bodies were hit then the hit_id is -1
+//RayHit:
+//    double dist: distance to the hit
+//    int hit_id: the id of the body that was hit
 RayHit BVH_traverse(const BVHNode* root, const Ray* ray, const Body* bodies);
+
+static void push(ShortStack* stack, BVHNode** node_ptr_ptr);
+
+static BVHNode* pop(ShortStack* stack);
+
+// returns false if it is time to terminate traversal
+static char smartPop(ShortStack* stack, BVHNode** node_ptr_ptr, BVHNode* root_ptr, unsigned long* trailBits_ptr, unsigned int* level_ptr, unsigned int* popLevel_ptr);
+
+// returns 1 if the tree is valid, 0 if invalid
+int BVH_validateTree(BVHNode* node);
 
 void BVH_freeTree(BVHNode* node);
 

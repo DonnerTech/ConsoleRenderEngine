@@ -97,32 +97,6 @@ void testRayPlane(int iter)
 	printf("testRayPlane(%d) took: %d ms\n", iter, (clock() - start) * 1000 / CLOCKS_PER_SEC);
 }
 
-int validateBVHTree(BVHNode* node)
-{
-	if (node == NULL)
-	{
-		printf("Invalid BVH Tree! (found dead node in branch)\n");
-
-		return 0;
-	}
-
-	// if branch node continue
-	if (node->id == -1)
-	{
-		if (!validateBVHTree(node->left_ptr))
-		{
-
-			printf("(left node parent) data: %d\n", node->id);
-		}
-		if (!validateBVHTree(node->right_ptr))
-		{
-			printf("(right node parent) data: %d\n", node->id);
-		}
-	}
-
-	return 1;
-}
-
 void testBVHtree(int bodyCount, double scatter, int print)
 {
 	Body* bodies = malloc(sizeof(Body) * bodyCount);
@@ -147,7 +121,7 @@ void testBVHtree(int bodyCount, double scatter, int print)
 
 	printf("%d leaf BVH creation time: %d ms\n", bodyCount, (clock() - start)*1000 / CLOCKS_PER_SEC);
 
-	validateBVHTree(node);
+	BVH_validateTree(node);
 
 	start = clock();
 

@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 1000
+#define BODY_COUNT 100
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -12,7 +12,7 @@ void physics_test(void)
 	PhysicsWorld world;
 
 	// initialize the world with earth's gravity
-	physicsWorld_Init(&world, (Vector3) { 0.0, 0.0981, 0.0 });
+	physicsWorld_Init(&world, (Vector3) { 0.0, 0.981, 0.0 });
 	
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
@@ -86,7 +86,11 @@ void physics_test(void)
 
 
 		//rendering
-		renderer_raytrace(world.bodies, textureIDs, texture, world.body_count, camera_pos, camera_angle, 90.0);
+		if (!renderer_raytrace(world.bodies, textureIDs, texture, world.body_count, camera_pos, camera_angle, 90.0))
+		{
+			printf("RT Error!");
+			system("pause");
+		}
 
 		// send frame to console
 		renderFrame();

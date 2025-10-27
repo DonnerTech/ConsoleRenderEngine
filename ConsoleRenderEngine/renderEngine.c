@@ -80,7 +80,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 	RayHit i = BVH_traverse(BVHroot, &ray, bodies);
 
 	Vector3 localHitPoint = { 0 };
-	double minDist = 1e30;
+	double minDist = 1e31;
 	double dist = 0;
 
 	// inside hvh
@@ -90,12 +90,12 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 		{
 			minDist = dist;
 
-			RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
-			RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
-			RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
-			//RGBAout[0] = 20;
-			//RGBAout[1] = 20;
-			//RGBAout[2] = 200;
+			//RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			//RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			//RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
+			RGBAout[0] = 20;
+			RGBAout[1] = 20;
+			RGBAout[2] = 200;
 			RGBAout[3] = 255;
 			return;
 		}
@@ -128,9 +128,9 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 
 			if (abs((int)localHitPoint.x - localHitPoint.z) % 20 > 0 && abs((int)localHitPoint.z + localHitPoint.x) % 20 > 0)
 			{
-				RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
-				RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
-				RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
+				RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 1);
+				RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 1);
+				RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 1);
 				RGBAout[3] = 255;
 			}
 		}
@@ -199,6 +199,8 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 	//create bvh tree
 	BVHNode* BVHroot = BVH_createTree(bodies, count-1);
 
+	if (!BVH_validateTree(BVHroot)) return 0;
+
 	//BVH_DebugPrint(BVHroot);
 	//system("pause");
 
@@ -206,7 +208,7 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 	{
 		fprintf(stderr, "Error creating BVH Tree\n");
 		system("pause");
-		return 1;
+		return 0;
 	}
 
 	HANDLE threads[NUM_THREADS];
@@ -214,7 +216,7 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 	// Launch threads
 	for (int i = 0; i < NUM_THREADS; i++) {
 		RaytraceGroupArgs* args = malloc(sizeof(RaytraceGroupArgs));
-		if (!args) return 1;
+		if (!args) return 0;
 
 		args->bodies = bodies;
 		args->BVHroot = BVHroot;
@@ -239,7 +241,7 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 		if (threads[i] == NULL) {
 			fprintf(stderr, "Error creating thread %d\n", i);
 			system("pause");
-			return 1;
+			return 0;
 		}
 	}
 
@@ -251,7 +253,7 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 
 	BVH_freeTree(BVHroot);
 
-	return 0;
+	return 1;
 }
 
 int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
