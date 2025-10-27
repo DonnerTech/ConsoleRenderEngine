@@ -428,12 +428,12 @@ RayHit BVH_traverse(const BVHNode* root, const Ray* ray, Body* bodies)
 	unsigned long level = 0;
 	unsigned long popLevel = 0; // NONE
 
-	RayHit output = { 1e30, -1 }; // holds the ray length and becomes the output hit data
+	RayHit output = { 1e30, NO_HIT }; // holds the ray length and becomes the output hit data
 
 	char run = 1; // works as the exit flag
 	while (run) // (5)
 	{
-		while (node->id == -1 && run)
+		while (node && node->id == -1 && run)
 		{
 			// intersect ray against children of node
 			RayHit child_a = (RayHit){ 1e30, NO_HIT };

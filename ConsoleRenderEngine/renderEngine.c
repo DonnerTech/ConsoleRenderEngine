@@ -84,7 +84,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 	double dist = 0;
 
 	// inside hvh
-	if (i.hit_id != -1)
+	if (i.hit_id != NO_HIT)
 	{
 		if (bodies[i.hit_id].type == SHAPE_SPHERE /*&& raySphereIntersection(bodies[i.hit_id], ray, &dist)*/)
 		{
