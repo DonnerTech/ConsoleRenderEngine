@@ -159,22 +159,23 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 		}
 	}
 
+	//BYTE color[4] = { (BYTE)max(255 - (minDist * depthScalar), 1), 20, 200 ,252 };
+	//overlayColor(color, RGBAout);
+
 	//debug
 	//if (ray_aabb(ray, BVHroot->bounds.min, BVHroot->bounds.max, 1e30, &minDist))
 	//{
 	//	BYTE color[4] = {200, 20, 20 ,220};
 	//	overlayColor(color, RGBAout);
 	//}
-
-	if (ray_aabb(ray, BVHroot->left_ptr->bounds.min, BVHroot->left_ptr->bounds.max, 1e30, &dist))
+	if (BVHroot->left_ptr && ray_aabb(ray, BVHroot->left_ptr->bounds.min, BVHroot->left_ptr->bounds.max, 1e30, &dist))
 	{
-		BYTE color[4] = { (BYTE)max(255 - (dist * depthScalar), 1), 20, 200 ,252 };
+		BYTE color[4] = { (BYTE)max(255 - (dist * 50), 1), 200, 20 ,252 };
 		overlayColor(color, RGBAout);
 	}
-
-	if (ray_aabb(ray, BVHroot->right_ptr->bounds.min, BVHroot->right_ptr->bounds.max, 1e30, &dist))
+	if (BVHroot->right_ptr && ray_aabb(ray, BVHroot->right_ptr->bounds.min, BVHroot->right_ptr->bounds.max, 1e30, &dist))
 	{
-		BYTE color[4] = { (BYTE)max(255 - (dist * depthScalar), 1), 20, 200 ,252 };
+		BYTE color[4] = { (BYTE)max(255 - (dist * 50), 1), 20, 200 ,252 };
 		overlayColor(color, RGBAout);
 	}
 

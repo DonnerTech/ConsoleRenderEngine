@@ -442,6 +442,9 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 
 void BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* state)
 {
+	if (node == NULL)
+		return;
+
 	nodesVisited++;
 
 	if (node->ids[0] != -1) // leaf node
@@ -451,7 +454,7 @@ void BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* sta
 		for (int i = 0; i < IDS_MAX; i++)
 		{
 			int id = node->ids[i];
-			if (id == -1) continue;
+			if (id == -1) break;
 
 			double leafDist = 1e30;
 			int leafHit = intersectBody(bodies[id], *ray, &leafDist);
@@ -466,33 +469,12 @@ void BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* sta
 		return;
 	}
 
-	double distL = 1e30, distR = 1e30;
-	int hitL = ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, state->dist, &distL);
-	int hitR = ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, state->dist, &distR);
-
-	if (hitL && hitR)
-	{
-		if (distL < distR)
-		{
-			BVH_traverse(node->left_ptr, ray, bodies, state);
-			//if (state->dist <= distR) return;
-			BVH_traverse(node->right_ptr, ray, bodies, state);
-		}
-		else
-		{
-			BVH_traverse(node->right_ptr, ray, bodies, state);
-			//if (state->dist <= distL) return;
-			BVH_traverse(node->left_ptr, ray, bodies, state);
-		}
-	}
-	else if (hitL)
-	{
+	double dist;
+	if(ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, 1e30, &dist))
 		BVH_traverse(node->left_ptr, ray, bodies, state);
-	}
-	else if (hitR)
-	{
+
+	if (ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, 1e30, &dist))
 		BVH_traverse(node->right_ptr, ray, bodies, state);
-	}
 }
 
 
