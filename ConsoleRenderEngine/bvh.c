@@ -440,44 +440,61 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 }
 
-RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* state)
+void BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* state)
 {
-	double distance;
-	int boundsCheck = ray_aabb(*ray, node->bounds.min, node->bounds.max, state->dist, &distance);
+	nodesVisited++;
 
-	if (boundsCheck)
+	if (node->ids[0] != -1) // leaf node
 	{
-		nodesVisited++;
+		leavesVisited++;
 
-		if (node->ids[0] != -1) // it is a leaf node
+		for (int i = 0; i < IDS_MAX; i++)
 		{
-			leavesVisited++;
+			int id = node->ids[i];
+			if (id == -1) continue;
 
-			for (int i = 0; i < IDS_MAX; i++)
+			double leafDist = 1e30;
+			int leafHit = intersectBody(bodies[id], *ray, &leafDist);
+
+			if (leafHit && leafDist > 0.0 && leafDist < state->dist)
 			{
-				if (node->ids[i] == -1)
-					continue; // break;
+				state->dist = leafDist;
+				state->hit_id = id;
 
-				double leafDist = 1e30;
-				int leafHit = intersectBody(bodies[node->ids[i]], *ray, &leafDist);
-
-				if (leafHit && leafDist < state->dist)
-				{
-					state->dist = leafDist;
-					state->hit_id = node->ids[i];
-				}
 			}
 		}
-		else // it is a branch node
-		{
-
-			*state = BVH_traverse(node->left_ptr, ray, bodies, state);
-			*state = BVH_traverse(node->right_ptr, ray, bodies, state);
-		}
+		return;
 	}
 
-	return *state;
+	double distL = 1e30, distR = 1e30;
+	int hitL = ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, state->dist, &distL);
+	int hitR = ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, state->dist, &distR);
+
+	if (hitL && hitR)
+	{
+		if (distL < distR)
+		{
+			BVH_traverse(node->left_ptr, ray, bodies, state);
+			//if (state->dist <= distR) return;
+			BVH_traverse(node->right_ptr, ray, bodies, state);
+		}
+		else
+		{
+			BVH_traverse(node->right_ptr, ray, bodies, state);
+			//if (state->dist <= distL) return;
+			BVH_traverse(node->left_ptr, ray, bodies, state);
+		}
+	}
+	else if (hitL)
+	{
+		BVH_traverse(node->left_ptr, ray, bodies, state);
+	}
+	else if (hitR)
+	{
+		BVH_traverse(node->right_ptr, ray, bodies, state);
+	}
 }
+
 
 void BVH_freeTree(BVHNode* node)
 {
@@ -530,9 +547,18 @@ static void BVH_PrintNode(const BVHNode* node, int depth)
 
 	// print node info
 	if (node->ids[0] == -1)
+	{
 		printf("Branch Node\n");
+	}
 	else
-		printf("Leaf Node (id=%d)\n", node->ids[0]);
+	{
+		printf("Leaf Node ");
+		for (int i = 0; i < IDS_MAX; i++)
+		{
+			printf("(id=%d) ", node->ids[i]);
+		}
+		printf("\n");
+	}
 
 	// print bounds
 	for (int i = 0; i < depth; ++i)

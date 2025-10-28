@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 1000
+#define BODY_COUNT 8
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -12,7 +12,7 @@ void physics_test(void)
 	PhysicsWorld world;
 
 	// initialize the world with earth's gravity
-	physicsWorld_Init(&world, (Vector3) { 0.0, 9.81, 0.0 }); // 9.81
+	physicsWorld_Init(&world, (Vector3) { 0.0, 0.981, 0.0 }); // 9.81
 	
 	for (int i = 0; i < BODY_COUNT; i++)
 	{

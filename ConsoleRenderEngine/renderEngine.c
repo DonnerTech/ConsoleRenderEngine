@@ -73,15 +73,33 @@ void winPrintFrame()
 	printf("blitting time: %d ms\n", clock() - printStart);
 }
 
+// color overlay with alpha support
+void overlayColor(BYTE RGBAin[4], BYTE RGBAout[4])
+{
+	//	alpha01 = (1 - a0)·a1 + a0
+	float alpha01 = ((255 - (float)RGBAin[3]) * (float)RGBAout[3] + (float)RGBAin[3]);
+
+	//	red01 = ((1 - a0)·a1·r1 + a0·r0) / alpha01
+	RGBAout[0] = (BYTE)(((255 - (float)RGBAin[3]) * (float)RGBAout[3] * (float)RGBAout[0] + (float)RGBAin[3] * (float)RGBAin[0]) / alpha01);
+
+	//	green01 = ((1 - a0)·a1·g1 + a0·g0) / alpha01
+	RGBAout[1] = (BYTE)(((255 - (float)RGBAin[3]) * (float)RGBAout[3] * (float)RGBAout[1] + (float)RGBAin[3] * (float)RGBAin[1]) / alpha01);
+
+	//	blue01 = ((1 - a0)·a1·b1 + a0·b0) / alpha01
+	RGBAout[2] = (BYTE)(((255 - (float)RGBAin[3]) * (float)RGBAout[3] * (float)RGBAout[2] + (float)RGBAin[3] * (float)RGBAin[2]) / alpha01);
+
+	RGBAout[3] = (BYTE)alpha01;
+}
+
 int raysShot = 0;
 
 void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs, Texture* textures, int count, Ray ray)
 {
 	raysShot++;
 
-	const double depthScalar = 6e-1;
+	const double depthScalar = 40e-1;
 
-	RayHit state = (RayHit){ 2e30, NO_HIT};
+	RayHit state = (RayHit){ 1e30, NO_HIT};
 
 	BVH_traverse(BVHroot, &ray, bodies, &state);
 
@@ -95,7 +113,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 	{
 		if (bodies[state.hit_id].type == SHAPE_SPHERE)
 		{
-			minDist = dist;
+			minDist = state.dist;
 
 			//RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
 			//RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
@@ -104,17 +122,15 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 			RGBAout[1] = 200;
 			RGBAout[2] = 20;
 			RGBAout[3] = 255;
-			return;
 		}
 		else if (bodies[state.hit_id].type == SHAPE_BOX)
 		{
-			minDist = dist;
+			minDist = state.dist;
 
 			RGBAout[0] = 20;
 			RGBAout[1] = 20;
 			RGBAout[2] = 200;
 			RGBAout[3] = 255;
-			return;
 		}
 	}
 
@@ -143,7 +159,25 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 		}
 	}
 
-	return;
+	//debug
+	//if (ray_aabb(ray, BVHroot->bounds.min, BVHroot->bounds.max, 1e30, &minDist))
+	//{
+	//	BYTE color[4] = {200, 20, 20 ,220};
+	//	overlayColor(color, RGBAout);
+	//}
+
+	if (ray_aabb(ray, BVHroot->left_ptr->bounds.min, BVHroot->left_ptr->bounds.max, 1e30, &dist))
+	{
+		BYTE color[4] = { (BYTE)max(255 - (dist * depthScalar), 1), 20, 200 ,252 };
+		overlayColor(color, RGBAout);
+	}
+
+	if (ray_aabb(ray, BVHroot->right_ptr->bounds.min, BVHroot->right_ptr->bounds.max, 1e30, &dist))
+	{
+		BYTE color[4] = { (BYTE)max(255 - (dist * depthScalar), 1), 20, 200 ,252 };
+		overlayColor(color, RGBAout);
+	}
+
 }
 
 
