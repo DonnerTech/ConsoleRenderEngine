@@ -85,19 +85,11 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 	double minDist = 2e30;
 	double dist = 0;
 
-	if (state.hit_id != NO_HIT)
-	{
-		RGBAout[0] = 20;
-		RGBAout[1] = 20;
-		RGBAout[2] = 200;
-		RGBAout[3] = 255;
-		return;
-	}
 
 	// inside hvh
 	if (state.hit_id != NO_HIT)
 	{
-		if (bodies[state.hit_id].type == SHAPE_SPHERE /*&& raySphereIntersection(bodies[i.hit_id], ray, &dist)*/)
+		if (bodies[state.hit_id].type == SHAPE_SPHERE)
 		{
 			minDist = dist;
 
@@ -105,18 +97,18 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 			//RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
 			//RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
 			RGBAout[0] = 20;
-			RGBAout[1] = 20;
-			RGBAout[2] = 200;
+			RGBAout[1] = 200;
+			RGBAout[2] = 20;
 			RGBAout[3] = 255;
 			return;
 		}
-		else if (bodies[state.hit_id].type == SHAPE_BOX /*&& rayBoxIntersection(bodies[i.hit_id], ray, &dist, &localHitPoint)*/)
+		else if (bodies[state.hit_id].type == SHAPE_BOX)
 		{
 			minDist = dist;
 
 			RGBAout[0] = 20;
-			RGBAout[1] = 200;
-			RGBAout[2] = 20;
+			RGBAout[1] = 20;
+			RGBAout[2] = 200;
 			RGBAout[3] = 255;
 			return;
 		}

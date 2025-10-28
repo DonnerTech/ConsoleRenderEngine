@@ -11,8 +11,8 @@ Bounds BVH_calculateBounds(Body body)
 		{
 			Vector3 extents = (Vector3){body.sphere.radius, body.sphere.radius, body.sphere.radius };
 			return (Bounds) {
-				vector3_subtract(body.position, extents),
-				vector3_add(body.position, extents)
+				.min = vector3_subtract(body.position, extents),
+				.max = vector3_add(body.position, extents)
 			};
 		}
 		case(SHAPE_BOX):
@@ -22,8 +22,8 @@ Bounds BVH_calculateBounds(Body body)
 			Vector3 one = (Vector3){ 1,1,1 };
 
 			return (Bounds) {
-				vector3_subtract(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents))),
-				vector3_add(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents)))
+				.min = vector3_subtract(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents))),
+				.max = vector3_add(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents)))
 			};
 		}
 		case(SHAPE_PLANE):
@@ -325,8 +325,8 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	// sort the codes
 	//BVH_sortMortonCodes(mortonIDpair_list, count);
 	//BVH_mergesortMortonCodes(mortonIDpair_list, 0, count - 1);
-	BVH_quicksortMortonCodes_L(mortonIDpair_list, 0, count - 1);
-	//BVH_quicksortMortonCodes(mortonIDpair_list, 0, count - 1);
+	//BVH_quicksortMortonCodes_L(mortonIDpair_list, 0, count - 1);
+	BVH_quicksortMortonCodes(mortonIDpair_list, 0, count - 1);
 
 
 #if _DEBUG
@@ -351,8 +351,8 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	BVHNode* root = BVH_createSubTree(mortonIDpair_list, bodyBounds_list, 0, count-1);
 
 	free(mortonIDpair_list);
-
 	free(bodyBounds_list);
+
 	return root;
 }
 
@@ -416,22 +416,23 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 }
 
-
 RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* state)
 {
 	double distance;
-	int boundsCheck = ray_aabb(*ray, node->bounds.min, node->bounds.max, 1e30, &distance);
+	int boundsCheck = ray_aabb(*ray, node->bounds.min, node->bounds.max, state->dist, &distance);
 
 	if (boundsCheck)
 	{
+		nodesVisited++;
+
 		if (node->id != -1) // it is a leaf node
 		{
 			leavesVisited++;
 
-			double leafDist;
+			double leafDist = 1e30;
 			int leafHit = intersectBody(bodies[node->id], *ray, &leafDist);
 
-			if (leafDist < state->dist)
+			if (leafHit && leafDist < state->dist)
 			{
 				state->dist = leafDist;
 				state->hit_id = node->id;
@@ -439,7 +440,6 @@ RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* s
 		}
 		else // it is a branch node
 		{
-			nodesVisited += 2;
 
 			*state = BVH_traverse(node->left_ptr, ray, bodies, state);
 			*state = BVH_traverse(node->right_ptr, ray, bodies, state);
@@ -448,7 +448,6 @@ RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* s
 
 	return *state;
 }
-
 
 void BVH_freeTree(BVHNode* node)
 {

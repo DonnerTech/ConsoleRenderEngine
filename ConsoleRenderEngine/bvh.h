@@ -9,8 +9,6 @@
 * https://www.geeksforgeeks.org/dsa/tail-recursion/
 * https://www.cs.cornell.edu/courses/JavaAndDS/files/sort3Quicksort3.pdf
 * 
-* Ray Traversal algorithm based on:
-* https://research.nvidia.com/sites/default/files/pubs/2010-06_Restart-Trail-for/laine2010hpg_paper.pdf
 */
 #pragma once
 #ifndef BVH_H
@@ -70,7 +68,7 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 
 void BVH_updateTreeBounds(BVHNode* node, Body* body_list);
 
-#define NO_HIT -2
+#define NO_HIT -1
 
 typedef struct {
 	double dist;
@@ -78,7 +76,7 @@ typedef struct {
 } RayHit;
 
 //BVH_traverse(...) traverses a bvh tree and returns a RayHit
-//if no bodies were hit then the hit_id is -1
+//if no bodies were hit then the hit_id is NO_HIT or -1
 //RayHit:
 //    double dist: distance to the hit
 //    int hit_id: the id of the body that was hit

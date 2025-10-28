@@ -30,11 +30,11 @@ int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax, double *dist_ptr)
 	tzmax = (bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
 	tmin = max(tzmin, max(tymin, max(txmin, tmin)));
 	tmax = min(tzmax, min(tymax, min(txmax, tmax)));
-	tmax *= 1.00000024;
+	//tmax *= 1.00000024;
 
 	*dist_ptr = tmin;
 
-	return tmin <= tmax;
+	return tmax > 0 || tmin > 0;
 }
 
 int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
@@ -48,7 +48,7 @@ int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
 	*dist_ptr = direct_dist - fast_cos(angle) * sphere.sphere.radius;
 
 	double a = fast_sin(angle) * direct_dist;
-	if (a < sphere.sphere.radius && fast_cos(angle) > 0)
+	if (a <= sphere.sphere.radius && fast_cos(angle) >= 0)
 	{
 
 		return 1;
