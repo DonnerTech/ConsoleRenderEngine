@@ -143,36 +143,35 @@ int rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHi
 	return 1;
 }
 
-double intersectBody(Body body, Ray ray)
+int intersectBody(Body body, Ray ray, double* dist_ptr)
 {
-	double dist = 1e30;
 
 	if (body.type == SHAPE_SPHERE)
 	{
-		if (raySphereIntersection(body, ray, &dist))
+		if (raySphereIntersection(body, ray, dist_ptr))
 		{
-			return dist;
+			return 1;
 		}
 	}
 	else if (body.type == SHAPE_BOX)
 	{
 		Vector3 localHitPoint = { 0 };
 
-		if (rayBoxIntersection(body, ray, &dist, &localHitPoint))
+		if (rayBoxIntersection(body, ray, dist_ptr, &localHitPoint))
 		{
-			return dist;
+			return 1;
 		}
 	}
 	else if (body.type == SHAPE_PLANE)
 	{
 		// not  in a bvh
-		return dist;
+		return 0;
 	}
 	else
 	{
 		// unknown shape
-		return dist;
+		return 0;
 	}
 
-	return dist;
+	return 0;
 }

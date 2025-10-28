@@ -24,7 +24,7 @@ int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoi
 
 int rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHitPoint);
 
-double intersectBody(Body body, Ray ray);
+int intersectBody(Body body, Ray ray, double* dist_ptr);
 
 #endif // RAY_H
 

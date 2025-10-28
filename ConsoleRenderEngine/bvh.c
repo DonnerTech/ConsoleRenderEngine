@@ -417,193 +417,36 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 }
 
 
-RayHit BVH_traverse(const BVHNode* root, const Ray* ray, Body* bodies)
+RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* state)
 {
+	double distance;
+	int boundsCheck = ray_aabb(*ray, node->bounds.min, node->bounds.max, 1e30, &distance);
 
-	ShortStack sStack; // the short stack
-	sStack.count = 0;
-
-	BVHNode* node = root;
-	unsigned long trailBits = 0;
-	unsigned long level = 0;
-	unsigned long popLevel = 0; // NONE
-
-	RayHit output = { 1e30, NO_HIT }; // holds the ray length and becomes the output hit data
-
-	char run = 1; // works as the exit flag
-	while (run) // (5)
+	if (boundsCheck)
 	{
-		while (node && node->id == -1 && run)
+		if (node->id != -1) // it is a leaf node
 		{
-			// intersect ray against children of node
-			RayHit child_a = (RayHit){ 1e30, NO_HIT };
-			if (node->left_ptr)
+			leavesVisited++;
+
+			double leafDist;
+			int leafHit = intersectBody(bodies[node->id], *ray, &leafDist);
+
+			if (leafDist < state->dist)
 			{
-				if (ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, output.dist, &child_a.dist))
-				{
-					child_a.hit_id = node->left_ptr->id;
-				}
-
-#if _BENCHMARK
-				nodesVisited++;
-#endif
+				state->dist = leafDist;
+				state->hit_id = node->id;
 			}
-
-			RayHit child_b = (RayHit){ 1e30, NO_HIT };
-			if (node->right_ptr)
-			{
-				if (ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, output.dist, &child_b.dist))
-				{
-					child_b.hit_id = node->right_ptr->id;
-				}
-#if _BENCHMARK
-				nodesVisited++;
-#endif
-			}
-
-			// if both children intersected (8)
-			if (child_a.hit_id != NO_HIT && child_b.hit_id != NO_HIT)
-			{
-				BVHNode* near;
-				BVHNode* far;
-				if (child_a.dist <= child_b.dist) {
-					near = node->left_ptr;
-					far = node->right_ptr;
-				}
-				else {
-					near = node->right_ptr;
-					far = node->left_ptr;
-				}
-
-				level++;
-
-				if (bitCheck(&trailBits, level)) // (12)
-				{
-					node = far;
-				}
-				else
-				{
-					node = near;
-					push(&sStack, &far); // (16)
-				}
-			}
-			else if((child_a.hit_id == NO_HIT) ^ (child_b.hit_id == NO_HIT)) // if one child was intersected (18)
-			{
-				level++; // (19)
-
-				if (level != popLevel) // (20)
-				{
-					bitSet(&trailBits, level); // sets trailbits at level to 1 (21)
-					node = child_a.hit_id == NO_HIT ? node->right_ptr/*child_b*/ : node->left_ptr/*child_a*/; // (22)
-				}
-				else // (23)
-				{
-					run = smartPop(&sStack, &node, root, &trailBits, &level, &popLevel); // (24)
-				}
-				// endif (25)
-			}
-			else // (26)
-			{
-				run = smartPop(&sStack, &node, root, &trailBits, &level, &popLevel); // (27)
-			}
-			// endif (28)
 		}
-		// endwhile (29)
-
-		if (!run)
-			break;
-
-#if _BENCHMARK
-		leavesVisited++;
-#endif
-		//intersect the ray against primatives in the current node (30)
-		double dist = intersectBody(bodies[node->id], *ray);
-
-		if (dist < output.dist)
+		else // it is a branch node
 		{
-			output.dist = dist; // shorten the ray if a closer primative is hit (31)
-			output.hit_id = node->id;
+			nodesVisited += 2;
+
+			*state = BVH_traverse(node->left_ptr, ray, bodies, state);
+			*state = BVH_traverse(node->right_ptr, ray, bodies, state);
 		}
-
-		run = smartPop(&sStack, &node, root, &trailBits, &level, &popLevel); // (32)
-	}
-	// endwhile (33)
-
-	return output;
-}
-
-// pushes a BVHNode onto the stack
-static void push(ShortStack *stack, BVHNode** node_ptr_ptr)
-{
-	if (stack->count < MAX_SHORT_STACK_SIZE)
-	{
-		stack->nodeStack[stack->count] = *node_ptr_ptr;
-		stack->count++;
-	}
-}
-
-// pops a BVHNode from the stack
-static BVHNode* pop(ShortStack* stack)
-{
-	if (stack->count > 0)
-	{
-		return stack->nodeStack[--stack->count];
 	}
 
-	return NULL;
-}
-
-// returns 0 if it is time to terminate traversal
-static char smartPop(ShortStack* stack,
-	BVHNode** node_ptr_ptr,
-	const BVHNode* root_ptr,
-	unsigned long* trailBits_ptr,
-	unsigned int* level_ptr,
-	unsigned int* popLevel_ptr)
-{
-	// find largest i <= level such that trail[i] == 0
-	int i = (int)(*level_ptr);
-	while (i > 0 && bitCheck(*trailBits_ptr, (unsigned int)i) != 0)// (34)
-	{
-		i--;
-	}
-
-	*level_ptr = (unsigned int)i;
-
-	// trail[level] = 1 
-	bitSet(trailBits_ptr, *level_ptr);// (35)
-
-	// clear bits above level: keep bits [0 .. level]
-	if (*level_ptr + 1 >= sizeof(unsigned long) * 8)
-	{
-		// if we occupy the full word, mask = all ones
-		// do nothing (no bits above to clear)
-	}
-	else 
-	{
-		unsigned long mask = (1UL << (*level_ptr + 1)) - 1UL;
-		*trailBits_ptr &= mask;
-	}
-
-	// if sentinel bit (bit 0 here) is set -> terminate traversal
-	if (bitCheck(*trailBits_ptr, 0))
-	{
-		return 0; // terminate (37)
-	}
-
-	*popLevel_ptr = *level_ptr; // (38)
-
-	if (stack->count == 0) // (39)
-	{
-		*node_ptr_ptr = (BVHNode*)root_ptr; // restart traversal
-		*level_ptr = 0;
-	}
-	else // (42)
-	{
-		*node_ptr_ptr = pop(stack); //(43)
-	}
-
-	return 1;
+	return *state;
 }
 
 

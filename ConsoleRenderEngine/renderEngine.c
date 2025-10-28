@@ -77,16 +77,27 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 {
 	const double depthScalar = 6e-1;
 
-	RayHit i = BVH_traverse(BVHroot, &ray, bodies);
+	RayHit state = (RayHit){ 2e30, NO_HIT};
+
+	BVH_traverse(BVHroot, &ray, bodies, &state);
 
 	Vector3 localHitPoint = { 0 };
-	double minDist = 1e31;
+	double minDist = 2e30;
 	double dist = 0;
 
-	// inside hvh
-	if (i.hit_id != NO_HIT)
+	if (state.hit_id != NO_HIT)
 	{
-		if (bodies[i.hit_id].type == SHAPE_SPHERE /*&& raySphereIntersection(bodies[i.hit_id], ray, &dist)*/)
+		RGBAout[0] = 20;
+		RGBAout[1] = 20;
+		RGBAout[2] = 200;
+		RGBAout[3] = 255;
+		return;
+	}
+
+	// inside hvh
+	if (state.hit_id != NO_HIT)
+	{
+		if (bodies[state.hit_id].type == SHAPE_SPHERE /*&& raySphereIntersection(bodies[i.hit_id], ray, &dist)*/)
 		{
 			minDist = dist;
 
@@ -99,7 +110,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 			RGBAout[3] = 255;
 			return;
 		}
-		else if (bodies[i.hit_id].type == SHAPE_BOX /*&& rayBoxIntersection(bodies[i.hit_id], ray, &dist, &localHitPoint)*/)
+		else if (bodies[state.hit_id].type == SHAPE_BOX /*&& rayBoxIntersection(bodies[i.hit_id], ray, &dist, &localHitPoint)*/)
 		{
 			minDist = dist;
 

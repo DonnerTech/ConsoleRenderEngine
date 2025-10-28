@@ -12,7 +12,7 @@ void physics_test(void)
 	PhysicsWorld world;
 
 	// initialize the world with earth's gravity
-	physicsWorld_Init(&world, (Vector3) { 0.0, 0.981, 0.0 });
+	physicsWorld_Init(&world, (Vector3) { 0.0, 0.981, 0.0 }); // 9.81
 	
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
