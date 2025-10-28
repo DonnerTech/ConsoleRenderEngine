@@ -34,7 +34,7 @@ int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax, double *dist_ptr)
 
 	*dist_ptr = tmin;
 
-	return tmin <= tmax;
+	return (tmax > 0 || tmin > 0) && tmax > tmin;
 }
 
 int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
