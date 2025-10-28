@@ -33,9 +33,11 @@ typedef struct {
 	Vector3 max;
 } Bounds;
 
+#define IDS_MAX 32
+
 typedef struct BVHNode {
 	Bounds bounds; // the nodes bounding volume
-	int id; // the id of the object or -1 if a branch node
+	int ids[IDS_MAX]; // the id of the object or -1 if a branch node
 
 	// children of the node, NULL if leaf node
 	struct BVHNode* left_ptr;

@@ -373,10 +373,26 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 	}
 
 	// leaf node
-	if (begin == end)
+	if (end - begin < IDS_MAX)
 	{
 		node->bounds = bounds_list[begin];
-		node->id = mortonIDpair_list[begin].id;
+
+		// initialize to -1;
+		int i = 0;
+		for (; i < IDS_MAX; i++)
+		{
+			node->ids[i] = -1;
+		}
+
+		// set ids
+		i = 0;
+		do
+		{
+			node->ids[i] = mortonIDpair_list[begin].id;
+			node->bounds = Bounds_union(node->bounds, bounds_list[begin]);
+			i++;
+		} while (begin++ != end);
+
 		node->left_ptr = NULL;
 		node->right_ptr = NULL;
 	}
@@ -386,7 +402,7 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 		unsigned int split = BVH_getSplitPos(mortonIDpair_list, begin, end);
 		node->left_ptr = BVH_createSubTree(mortonIDpair_list, bounds_list, begin, split);
 		node->right_ptr = BVH_createSubTree(mortonIDpair_list, bounds_list, split+1, end);
-		node->id = -1; // this is an internal node
+		node->ids[0] = -1; // this is an internal node
 		node->bounds = Bounds_union(node->left_ptr->bounds, node->right_ptr->bounds);
 	}
 
@@ -402,7 +418,7 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 
 	// branch node
-	if (node->id == -1)
+	if (node->ids[0] == -1)
 	{
 		BVH_updateTreeBounds(node->left_ptr, body_list);
 		BVH_updateTreeBounds(node->right_ptr, body_list);
@@ -412,7 +428,15 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	// leaf node
 	else
 	{
-		node->bounds = BVH_calculateBounds(body_list[node->id]);
+		node->bounds = BVH_calculateBounds(body_list[node->ids[0]]);
+
+		for (int i = 1; i < IDS_MAX; i++)
+		{
+			if (node->ids[i] == -1)
+				continue; // break;
+
+			node->bounds = Bounds_union(node->bounds, BVH_calculateBounds(body_list[node->ids[i]]));
+		}
 	}
 }
 
@@ -425,17 +449,23 @@ RayHit BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* s
 	{
 		nodesVisited++;
 
-		if (node->id != -1) // it is a leaf node
+		if (node->ids[0] != -1) // it is a leaf node
 		{
 			leavesVisited++;
 
-			double leafDist = 1e30;
-			int leafHit = intersectBody(bodies[node->id], *ray, &leafDist);
-
-			if (leafHit && leafDist < state->dist)
+			for (int i = 0; i < IDS_MAX; i++)
 			{
-				state->dist = leafDist;
-				state->hit_id = node->id;
+				if (node->ids[i] == -1)
+					continue; // break;
+
+				double leafDist = 1e30;
+				int leafHit = intersectBody(bodies[node->ids[i]], *ray, &leafDist);
+
+				if (leafHit && leafDist < state->dist)
+				{
+					state->dist = leafDist;
+					state->hit_id = node->ids[i];
+				}
 			}
 		}
 		else // it is a branch node
@@ -468,16 +498,16 @@ int BVH_validateTree(BVHNode* node)
 	}
 
 	// if branch node continue
-	if (node->id == -1)
+	if (node->ids[0] == -1)
 	{
 		if (!BVH_validateTree(node->left_ptr))
 		{
 
-			printf("(left node parent) data: %d\n", node->id);
+			printf("(left node parent) data[0]: %d\n", node->ids[0]);
 		}
 		if (!BVH_validateTree(node->right_ptr))
 		{
-			printf("(right node parent) data: %d\n", node->id);
+			printf("(right node parent) data[0]: %d\n", node->ids[0]);
 		}
 	}
 
@@ -499,10 +529,10 @@ static void BVH_PrintNode(const BVHNode* node, int depth)
 		printf("%c%c", 192, 196);
 
 	// print node info
-	if (node->id == -1)
+	if (node->ids[0] == -1)
 		printf("Branch Node\n");
 	else
-		printf("Leaf Node (id=%d)\n", node->id);
+		printf("Leaf Node (id=%d)\n", node->ids[0]);
 
 	// print bounds
 	for (int i = 0; i < depth; ++i)
