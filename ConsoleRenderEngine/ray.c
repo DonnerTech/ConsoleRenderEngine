@@ -23,18 +23,17 @@ int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax, double *dist_ptr)
 
 	double tmin = 0, txmin, txmax, tymin, tymax, tzmin, tzmax;
 	txmin = (bounds[ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
-	txmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
+	//txmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
 	tymin = (bounds[ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
-	tymax = (bounds[1 - ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
+	//tymax = (bounds[1 - ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
 	tzmin = (bounds[ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
-	tzmax = (bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
+	//tzmax = (bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
 	tmin = max(tzmin, max(tymin, max(txmin, tmin)));
-	tmax = min(tzmax, min(tymax, min(txmax, tmax)));
-	//tmax *= 1.00000024;
+	//tmax = min(tzmax, min(tymax, min(txmax, tmax)));
 
 	*dist_ptr = tmin;
 
-	return tmax > 0 || tmin > 0;
+	return (tmax > 0 || tmin > 0) && tmin <= tmax;
 }
 
 int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
