@@ -73,8 +73,12 @@ void winPrintFrame()
 	printf("blitting time: %d ms\n", clock() - printStart);
 }
 
+int raysShot = 0;
+
 void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs, Texture* textures, int count, Ray ray)
 {
+	raysShot++;
+
 	const double depthScalar = 6e-1;
 
 	RayHit state = (RayHit){ 2e30, NO_HIT};
@@ -416,8 +420,11 @@ void printfFrameTimes(double targetms)
 
 	printf("Delta time: %f miliseconds\n", deltaTime);
 
-	printf("Nodes visited: %d, Leaves visited: %d\n",nodesVisited, leavesVisited);
-	nodesVisited = leavesVisited = 0;
+	printf("Nodes visited: %d, Leaves visited: %d Rays Shot: %d\n",nodesVisited, leavesVisited, raysShot);
+
+	printf("Leaves per Ray: %d", leavesVisited / raysShot);
+
+	nodesVisited = leavesVisited = raysShot = 0;
 
 	if (exec_time < targetms && exec_time > 0)
 		Sleep(targetms - (int)exec_time); // 16ms per frame = 60 fps
