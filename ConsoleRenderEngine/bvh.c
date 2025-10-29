@@ -459,22 +459,25 @@ void BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* sta
 			double leafDist = 1e30;
 			int leafHit = intersectBody(bodies[id], *ray, &leafDist);
 
-			if (leafHit && leafDist > 0.0 && leafDist < state->dist)
+			if (leafHit && leafDist < state->dist)
 			{
 				state->dist = leafDist;
 				state->hit_id = id;
 
 			}
 		}
-		return;
 	}
+	else
+	{
 
-	double dist;
-	if(ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, 1e30, &dist))
-		BVH_traverse(node->left_ptr, ray, bodies, state);
+		double dist = 0;
+		if (ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, 1e30, &dist))
+			BVH_traverse(node->left_ptr, ray, bodies, state);
 
-	if (ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, 1e30, &dist))
-		BVH_traverse(node->right_ptr, ray, bodies, state);
+		dist = 0;
+		if (ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, 1e30, &dist))
+			BVH_traverse(node->right_ptr, ray, bodies, state);
+	}
 }
 
 

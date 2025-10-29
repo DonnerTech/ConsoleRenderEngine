@@ -170,12 +170,12 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 	//}
 	if (BVHroot->left_ptr && ray_aabb(ray, BVHroot->left_ptr->bounds.min, BVHroot->left_ptr->bounds.max, 1e30, &dist))
 	{
-		BYTE color[4] = { (BYTE)max(255 - (dist * 50), 1), 200, 20 ,252 };
+		BYTE color[4] = { (BYTE)max(255 - (dist * 30), 1), 100, 20 ,252 };
 		overlayColor(color, RGBAout);
 	}
 	if (BVHroot->right_ptr && ray_aabb(ray, BVHroot->right_ptr->bounds.min, BVHroot->right_ptr->bounds.max, 1e30, &dist))
 	{
-		BYTE color[4] = { (BYTE)max(255 - (dist * 50), 1), 20, 200 ,252 };
+		BYTE color[4] = { (BYTE)max(255 - (dist * 30), 1), 20, 100 ,252 };
 		overlayColor(color, RGBAout);
 	}
 
