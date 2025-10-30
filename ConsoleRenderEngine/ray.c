@@ -169,22 +169,12 @@ int intersectBody(Body body, Ray ray, double* dist_ptr)
 	}
 	else if (body.type == SHAPE_BOX)
 	{
-		Vector3 localHitPoint = { 0 };
+		Vector3 localHitPoint = { 0, 0, 0 };
 
 		if (rayBoxIntersection(body, ray, dist_ptr, &localHitPoint))
 		{
 			return 1;
 		}
-	}
-	else if (body.type == SHAPE_PLANE)
-	{
-		// not  in a bvh
-		return 0;
-	}
-	else
-	{
-		// unknown shape
-		return 0;
 	}
 
 	return 0;

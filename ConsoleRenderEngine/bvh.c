@@ -269,14 +269,10 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	for (int i = 1; i < count; i++) {
 		bodyBounds_list[i] = BVH_calculateBounds(body_list[i]);
 
-		// skip 0 bound bodies
-		//if (bodyBounds_list[i].max.x == 0 && bodyBounds_list[i].max.y == 0 && bodyBounds_list[i].max.z == 0)
-		//{
-		//	continue;
-		//}
+		//sceneBounds.min = vector3_min(sceneBounds.min, bodyBounds_list[i].min);
+		//sceneBounds.max = vector3_max(sceneBounds.max, bodyBounds_list[i].max);
 
-		sceneBounds.min = vector3_min(sceneBounds.min, bodyBounds_list[i].min);
-		sceneBounds.max = vector3_max(sceneBounds.max, bodyBounds_list[i].max);
+		sceneBounds = Bounds_union(sceneBounds, bodyBounds_list[i]);
 	}
 
 	// compute the morton code list
@@ -310,7 +306,7 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 		printf("Morton Codes: \n");
 		for (int n = 0; n < count; n++)
 		{
-			printf("code %u: ", mortonIDpair_list[n].mortonCode);
+			printf("code %u: ", mortonIDpair_list[n].id);
 			for (int i = sizeof(mortonIDpair_list[n].mortonCode) * 8 - 1; i >= 0; i--)
 			{
 				printf("%d", (mortonIDpair_list[n].mortonCode >> i) & 1);
@@ -325,8 +321,8 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	// sort the codes
 	//BVH_sortMortonCodes(mortonIDpair_list, count);
 	//BVH_mergesortMortonCodes(mortonIDpair_list, 0, count - 1);
-	//BVH_quicksortMortonCodes_L(mortonIDpair_list, 0, count - 1);
-	BVH_quicksortMortonCodes(mortonIDpair_list, 0, count - 1);
+	BVH_quicksortMortonCodes_L(mortonIDpair_list, 0, count - 1);
+	//BVH_quicksortMortonCodes(mortonIDpair_list, 0, count - 1);
 
 
 #if _DEBUG
@@ -440,10 +436,12 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 }
 
-void BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* state)
+void BVH_traverse(BVHNode* node, const Ray ray, Body* bodies, RayHit* state)
 {
 	if (node == NULL)
+	{
 		return;
+	}
 
 	nodesVisited++;
 
@@ -454,10 +452,11 @@ void BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* sta
 		for (int i = 0; i < IDS_MAX; i++)
 		{
 			int id = node->ids[i];
-			if (id == -1) break;
+			if (id < 0)
+				continue;
 
 			double leafDist = 1e30;
-			int leafHit = intersectBody(bodies[id], *ray, &leafDist);
+			int leafHit = intersectBody(bodies[id], ray, &leafDist);
 
 			if (leafHit && leafDist < state->dist)
 			{
@@ -470,13 +469,17 @@ void BVH_traverse(const BVHNode* node, const Ray* ray, Body* bodies, RayHit* sta
 	else
 	{
 
-		double dist = 0;
-		if (ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, 1e30, &dist))
-			BVH_traverse(node->left_ptr, ray, bodies, state);
-
-		dist = 0;
-		if (ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, 1e30, &dist))
+		double dist1 = 1e30;
+		if (ray_aabb(ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, 1e30, &dist1))
+		{
 			BVH_traverse(node->right_ptr, ray, bodies, state);
+		}
+
+		double dist2 = 1e30;
+		if (ray_aabb(ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, 1e30, &dist2))
+		{
+			BVH_traverse(node->left_ptr, ray, bodies, state);
+		}
 	}
 }
 

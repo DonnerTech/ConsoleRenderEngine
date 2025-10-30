@@ -33,7 +33,7 @@ typedef struct {
 	Vector3 max;
 } Bounds;
 
-#define IDS_MAX 4
+#define IDS_MAX 1
 
 typedef struct BVHNode {
 	Bounds bounds; // the nodes bounding volume
@@ -72,17 +72,17 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list);
 
 #define NO_HIT -1
 
-typedef struct {
+typedef struct RayHit {
 	double dist;
 	int hit_id;
 } RayHit;
 
 //BVH_traverse(...) traverses a bvh tree and returns a RayHit
-//if no bodies were hit then the hit_id is NO_HIT or -1
+//if no bodies were hit then the value of hit_id is NO_HIT
 //RayHit:
 //    double dist: distance to the hit
 //    int hit_id: the id of the body that was hit
-void BVH_traverse(const BVHNode* node, const Ray* ray, const Body* bodies, RayHit* state);
+void BVH_traverse(const BVHNode* node, const Ray ray, const Body* bodies, RayHit* state);
 
 // returns 1 if the tree is valid, 0 if invalid
 int BVH_validateTree(BVHNode* node);

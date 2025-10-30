@@ -65,7 +65,9 @@ int main(void)
 
 	system("pause");
 
-	physics_test();
+	//physics_test();
+
+	bvh_test();
 
 	return 0;
 }

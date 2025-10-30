@@ -97,16 +97,23 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 {
 	raysShot++;
 
-	const double depthScalar = 40e-1;
+	const double depthScalar = 8e0;
 
 	RayHit state = (RayHit){ 1e30, NO_HIT};
 
-	BVH_traverse(BVHroot, &ray, bodies, &state);
+	BVH_traverse(BVHroot, ray, bodies, &state);
+
+
+	RGBAout[0] = (BYTE)max(255 - (state.dist * depthScalar), 1);
+	RGBAout[1] = (BYTE)max(255 - (state.dist * depthScalar), 1);
+	RGBAout[2] = (BYTE)max(255 - (state.dist * depthScalar), 1);
+	RGBAout[3] = 255;
+
+	//return;
 
 	Vector3 localHitPoint = { 0 };
-	double minDist = 2e30;
+	double minDist = 1e30;
 	double dist = 0;
-
 
 	// inside hvh
 	if (state.hit_id != NO_HIT)
@@ -151,9 +158,9 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 
 			if (abs((int)localHitPoint.x - localHitPoint.z) % 20 > 0 && abs((int)localHitPoint.z + localHitPoint.x) % 20 > 0)
 			{
-				RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 1);
-				RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 1);
-				RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 1);
+				//RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 1);
+				//RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 1);
+				//RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 1);
 				RGBAout[3] = 255;
 			}
 		}
@@ -162,23 +169,26 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 	//BYTE color[4] = { (BYTE)max(255 - (minDist * depthScalar), 1), 20, 200 ,252 };
 	//overlayColor(color, RGBAout);
 
+
 	//debug
-	//if (ray_aabb(ray, BVHroot->bounds.min, BVHroot->bounds.max, 1e30, &minDist))
-	//{
-	//	BYTE color[4] = {200, 20, 20 ,220};
-	//	overlayColor(color, RGBAout);
-	//}
-	if (BVHroot->left_ptr && ray_aabb(ray, BVHroot->left_ptr->bounds.min, BVHroot->left_ptr->bounds.max, 1e30, &dist))
+	ray_bvh(RGBAout, BVHroot, ray, 0);
+}
+
+void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth)
+{
+	if (node == NULL)
+		return;
+
+	double d;
+	if (ray_aabb(ray, node->bounds.min, node->bounds.max, 1e30, &d))
 	{
-		BYTE color[4] = { (BYTE)max(255 - (dist * 30), 1), 100, 20 ,252 };
-		overlayColor(color, RGBAout);
-	}
-	if (BVHroot->right_ptr && ray_aabb(ray, BVHroot->right_ptr->bounds.min, BVHroot->right_ptr->bounds.max, 1e30, &dist))
-	{
-		BYTE color[4] = { (BYTE)max(255 - (dist * 30), 1), 20, 100 ,252 };
+		BYTE color[4] = { max(255 - depth,0), 20, min(depth,255) ,252 };
 		overlayColor(color, RGBAout);
 	}
 
+	ray_bvh(RGBAout, node->left_ptr, ray, depth + 10);
+
+	ray_bvh(RGBAout, node->right_ptr, ray, depth + 10);
 }
 
 
@@ -239,7 +249,7 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 	rendertimeClock = clock();
 
 	//create bvh tree
-	BVHNode* BVHroot = BVH_createTree(bodies, count-1);
+	BVHNode* BVHroot = BVH_createTree(bodies, count);
 
 	if (!BVH_validateTree(BVHroot)) return 0;
 
@@ -303,16 +313,16 @@ int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int co
 	rendertimeClock = clock();
 
 	//create bvh tree
-	BVHNode* BVHroot = BVH_createTree(bodies, count);
+	BVHNode* BVHroot = BVH_createTree(bodies, count-1);
 
-	BVH_DebugPrint(BVHroot);
+	//BVH_DebugPrint(BVHroot);
 	//system("pause");
 
 	if (BVHroot == NULL)
 	{
 		fprintf(stderr, "Error creating BVH Tree\n");
 		system("pause");
-		return 1;
+		return 0;
 	}
 
 	int width = outputFrame.texture.width;
@@ -326,7 +336,7 @@ int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int co
 	{
 		Vector3 rayDir;
 		rayDir.x = (((i % width) - (width / 2.0)) / width * 2) * fov / 90 * ((double)width / height);
-		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * fov / 90 * ((double)height / width);
+		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * fov / 90 * ((double)height / width); 
 		rayDir.z = 1;
 
 		Ray ray;
@@ -338,7 +348,7 @@ int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int co
 
 		BYTE RGBA[4] = { 0 };
 
-		raytrace(RGBA, bodies, BVHroot, textureIDs, textures, count, ray);
+		raytrace(RGBA, BVHroot, bodies, textureIDs, textures, count, ray);
 
 		for (int j = 0; j < outputFrame.texture.byteCount; j++)
 		{
@@ -348,7 +358,7 @@ int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int co
 
 	BVH_freeTree(BVHroot);
 
-	return 0;
+	return 1; 
 }
 
 int init(int w, int h)
@@ -431,7 +441,6 @@ void resetDeltaTime()
 
 void renderFrame(void)
 {
-	//printFrame();
 	winPrintFrame();
 }
 
@@ -455,9 +464,9 @@ void printfFrameTimes(double targetms)
 
 	printf("Delta time: %f miliseconds\n", deltaTime);
 
-	printf("Nodes visited: %d, Leaves visited: %d Rays Shot: %d\n",nodesVisited, leavesVisited, raysShot);
-
-	printf("Leaves per Ray: %d", leavesVisited / raysShot);
+	//printf("Nodes visited: %d, Leaves visited: %d Rays Shot: %d\n",nodesVisited, leavesVisited, raysShot);
+	printf("Nodes per Ray: %f\n", (float)nodesVisited / raysShot);
+	printf("Leaves per Ray: %f\n", (float)leavesVisited / raysShot);
 
 	nodesVisited = leavesVisited = raysShot = 0;
 
