@@ -64,6 +64,7 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
         return 0;
 
     texture->texMode = TEXMODE_REPEATING;
+    texture->uvScale = 1;
     texture->width = width;
     texture->height = height;
 
@@ -101,6 +102,7 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
 texLoader_generateTexture(Texture* texture, int byteCount, int width, int height)
 {
     texture->texMode = TEXMODE_REPEATING;
+    texture->uvScale = 1;
     texture->width = width;
     texture->height = height;
 

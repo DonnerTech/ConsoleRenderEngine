@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 100
+#define BODY_COUNT 1000
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -16,18 +16,17 @@ void physics_test(void)
 	PhysicsWorld world;
 
 	// initialize the world with earth's gravity
-	physicsWorld_Init(&world, (Vector3) { 0.0, 0.0981, 0.0 }); // 9.81
+	physicsWorld_Init(&world, (Vector3) { 0.0, 9.81, 0.0 }); // 9.81
 
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
 		// creates a sphere
-		double size = 0.2;
-		Vector3 position = vector3_add((Vector3) { 0.0, -2.5, 2.0 }, vector3_scale(vector3_random(), 2));
+		double size = 0.5;
+		Vector3 position = vector3_add((Vector3) { 0.0, -2.5 - size * i, 2.0 }, vector3_scale(vector3_random(), 2));
 
 		RigidBody sphere = rb_create_sphere(position, size, 1.0);
 		sphere.restitution = 1;
 		sphere.friction = 1;
-		sphere.isStatic = true;
 		physicsWorld_AddBody(&world, sphere);
 
 		//creates a box
@@ -65,11 +64,12 @@ void physics_test(void)
 	Vector3 camera_pos = { 0 };
 
 	Texture *texture = (Texture*)malloc(sizeof(Texture));
-	if (texLoader_LoadTexture(texture, L"textures\\texture_test.png") == 0)
+	if (texture == NULL || texLoader_LoadTexture(texture, L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png") == 0)
 	{
 		printf("Texture Load Fail");
 		return;
 	}
+	texture[0].uvScale = 0.0125f;
 
 	int* textureIDs = calloc(world.body_count, sizeof(int));
 

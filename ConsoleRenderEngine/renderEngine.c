@@ -97,17 +97,17 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 {
 	raysShot++;
 
-	const double depthScalar = 8e0;
+	const double depthScalar = 4e-1;
 
 	RayHit state = (RayHit){ 1e30, NO_HIT};
 
 	BVH_traverse(BVHroot, ray, bodies, &state);
 
 
-	RGBAout[0] = (BYTE)max(255 - (state.dist * depthScalar), 1);
-	RGBAout[1] = (BYTE)max(255 - (state.dist * depthScalar), 1);
-	RGBAout[2] = (BYTE)max(255 - (state.dist * depthScalar), 1);
-	RGBAout[3] = 255;
+	//RGBAout[0] = (BYTE)max(255 - (state.dist * depthScalar), 1);
+	//RGBAout[1] = (BYTE)max(255 - (state.dist * depthScalar), 1);
+	//RGBAout[2] = (BYTE)max(255 - (state.dist * depthScalar), 1);
+	//RGBAout[3] = 255;
 
 	//return;
 
@@ -122,9 +122,6 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 		{
 			minDist = state.dist;
 
-			//RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 0);
-			//RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 0);
-			//RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 0);
 			RGBAout[0] = 20;
 			RGBAout[1] = 200;
 			RGBAout[2] = 20;
@@ -153,16 +150,8 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 		if (rayPlaneIntersection(bodies[i], ray, &dist, &localHitPoint) && dist < minDist)
 		{
 			minDist = dist;
-			//texture_sample(textures, (Vector2) { localHitPoint.x, -localHitPoint.z }, RGBAout);
 
-
-			if (abs((int)localHitPoint.x - localHitPoint.z) % 20 > 0 && abs((int)localHitPoint.z + localHitPoint.x) % 20 > 0)
-			{
-				//RGBAout[0] = (BYTE)max(255 - (minDist * depthScalar), 1);
-				//RGBAout[1] = (BYTE)max(255 - (minDist * depthScalar), 1);
-				//RGBAout[2] = (BYTE)max(255 - (minDist * depthScalar), 1);
-				RGBAout[3] = 255;
-			}
+			texture_sample(textures, (Vector2) { localHitPoint.x, -localHitPoint.z }, RGBAout);
 		}
 	}
 

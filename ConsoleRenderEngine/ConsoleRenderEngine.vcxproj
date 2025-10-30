@@ -217,13 +217,16 @@
     <ClInclude Include="renderEngine.h" />
     <ClInclude Include="body.h" />
     <ClInclude Include="renderEngine_performanceTests.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="texture.h" />
     <ClInclude Include="textureLoader.h" />
     <ClInclude Include="vector2.h" />
     <ClInclude Include="vector3.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="textures\texture_test.png" />
+    <Image Include="textures\kenney_prototype-textures\PNG\Dark\texture_05.png">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </Image>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
