@@ -11,8 +11,8 @@ Bounds BVH_calculateBounds(Body body)
 		{
 			Vector3 extents = (Vector3){body.sphere.radius, body.sphere.radius, body.sphere.radius };
 			return (Bounds) {
-				vector3_subtract(body.position, extents),
-				vector3_add(body.position, extents)
+				.min = vector3_subtract(body.position, extents),
+				.max = vector3_add(body.position, extents)
 			};
 		}
 		case(SHAPE_BOX):
@@ -22,8 +22,8 @@ Bounds BVH_calculateBounds(Body body)
 			Vector3 one = (Vector3){ 1,1,1 };
 
 			return (Bounds) {
-				vector3_subtract(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents))),
-				vector3_add(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents)))
+				.min = vector3_subtract(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents))),
+				.max = vector3_add(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents)))
 			};
 		}
 		case(SHAPE_PLANE):
@@ -269,14 +269,10 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	for (int i = 1; i < count; i++) {
 		bodyBounds_list[i] = BVH_calculateBounds(body_list[i]);
 
-		// skip 0 bound bodies
-		//if (bodyBounds_list[i].max.x == 0 && bodyBounds_list[i].max.y == 0 && bodyBounds_list[i].max.z == 0)
-		//{
-		//	continue;
-		//}
+		//sceneBounds.min = vector3_min(sceneBounds.min, bodyBounds_list[i].min);
+		//sceneBounds.max = vector3_max(sceneBounds.max, bodyBounds_list[i].max);
 
-		sceneBounds.min = vector3_min(sceneBounds.min, bodyBounds_list[i].min);
-		sceneBounds.max = vector3_max(sceneBounds.max, bodyBounds_list[i].max);
+		sceneBounds = Bounds_union(sceneBounds, bodyBounds_list[i]);
 	}
 
 	// compute the morton code list
@@ -310,7 +306,7 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 		printf("Morton Codes: \n");
 		for (int n = 0; n < count; n++)
 		{
-			printf("code %u: ", mortonIDpair_list[n].mortonCode);
+			printf("code %u: ", mortonIDpair_list[n].id);
 			for (int i = sizeof(mortonIDpair_list[n].mortonCode) * 8 - 1; i >= 0; i--)
 			{
 				printf("%d", (mortonIDpair_list[n].mortonCode >> i) & 1);
@@ -351,8 +347,8 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	BVHNode* root = BVH_createSubTree(mortonIDpair_list, bodyBounds_list, 0, count-1);
 
 	free(mortonIDpair_list);
-
 	free(bodyBounds_list);
+
 	return root;
 }
 
@@ -373,10 +369,26 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 	}
 
 	// leaf node
-	if (begin == end)
+	if (end - begin < IDS_MAX)
 	{
-		node->bounds = bounds_list[begin];
-		node->id = mortonIDpair_list[begin].id;
+		node->bounds = bounds_list[mortonIDpair_list[begin].id];
+
+		// initialize to -1;
+		int i = 0;
+		for (; i < IDS_MAX; i++)
+		{
+			node->ids[i] = -1;
+		}
+
+		// set ids
+		i = 0;
+		do
+		{
+			node->ids[i] = mortonIDpair_list[begin].id;
+			node->bounds = Bounds_union(node->bounds, bounds_list[mortonIDpair_list[begin].id]);
+			i++;
+		} while (begin++ != end);
+
 		node->left_ptr = NULL;
 		node->right_ptr = NULL;
 	}
@@ -386,7 +398,7 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 		unsigned int split = BVH_getSplitPos(mortonIDpair_list, begin, end);
 		node->left_ptr = BVH_createSubTree(mortonIDpair_list, bounds_list, begin, split);
 		node->right_ptr = BVH_createSubTree(mortonIDpair_list, bounds_list, split+1, end);
-		node->id = -1; // this is an internal node
+		node->ids[0] = -1; // this is an internal node
 		node->bounds = Bounds_union(node->left_ptr->bounds, node->right_ptr->bounds);
 	}
 
@@ -402,7 +414,7 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	}
 
 	// branch node
-	if (node->id == -1)
+	if (node->ids[0] == -1)
 	{
 		BVH_updateTreeBounds(node->left_ptr, body_list);
 		BVH_updateTreeBounds(node->right_ptr, body_list);
@@ -412,198 +424,67 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 	// leaf node
 	else
 	{
-		node->bounds = BVH_calculateBounds(body_list[node->id]);
+		node->bounds = BVH_calculateBounds(body_list[node->ids[0]]);
+
+		for (int i = 1; i < IDS_MAX; i++)
+		{
+			if (node->ids[i] == -1)
+				continue; // break;
+
+			node->bounds = Bounds_union(node->bounds, BVH_calculateBounds(body_list[node->ids[i]]));
+		}
 	}
 }
 
-
-RayHit BVH_traverse(const BVHNode* root, const Ray* ray, Body* bodies)
+void BVH_traverse(BVHNode* node, const Ray ray, Body* bodies, RayHit* state)
 {
-
-	ShortStack sStack; // the short stack
-	sStack.count = 0;
-
-	BVHNode* node = root;
-	unsigned long trailBits = 0;
-	unsigned long level = 0;
-	unsigned long popLevel = 0; // NONE
-
-	RayHit output = { 1e30, NO_HIT }; // holds the ray length and becomes the output hit data
-
-	char run = 1; // works as the exit flag
-	while (run) // (5)
+	if (node == NULL)
 	{
-		while (node && node->id == -1 && run)
-		{
-			// intersect ray against children of node
-			RayHit child_a = (RayHit){ 1e30, NO_HIT };
-			if (node->left_ptr)
-			{
-				if (ray_aabb(*ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, output.dist, &child_a.dist))
-				{
-					child_a.hit_id = node->left_ptr->id;
-				}
+		return;
+	}
 
-#if _BENCHMARK
-				nodesVisited++;
-#endif
-			}
+	nodesVisited++;
 
-			RayHit child_b = (RayHit){ 1e30, NO_HIT };
-			if (node->right_ptr)
-			{
-				if (ray_aabb(*ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, output.dist, &child_b.dist))
-				{
-					child_b.hit_id = node->right_ptr->id;
-				}
-#if _BENCHMARK
-				nodesVisited++;
-#endif
-			}
-
-			// if both children intersected (8)
-			if (child_a.hit_id != NO_HIT && child_b.hit_id != NO_HIT)
-			{
-				BVHNode* near;
-				BVHNode* far;
-				if (child_a.dist <= child_b.dist) {
-					near = node->left_ptr;
-					far = node->right_ptr;
-				}
-				else {
-					near = node->right_ptr;
-					far = node->left_ptr;
-				}
-
-				level++;
-
-				if (bitCheck(&trailBits, level)) // (12)
-				{
-					node = far;
-				}
-				else
-				{
-					node = near;
-					push(&sStack, &far); // (16)
-				}
-			}
-			else if((child_a.hit_id == NO_HIT) ^ (child_b.hit_id == NO_HIT)) // if one child was intersected (18)
-			{
-				level++; // (19)
-
-				if (level != popLevel) // (20)
-				{
-					bitSet(&trailBits, level); // sets trailbits at level to 1 (21)
-					node = child_a.hit_id == NO_HIT ? node->right_ptr/*child_b*/ : node->left_ptr/*child_a*/; // (22)
-				}
-				else // (23)
-				{
-					run = smartPop(&sStack, &node, root, &trailBits, &level, &popLevel); // (24)
-				}
-				// endif (25)
-			}
-			else // (26)
-			{
-				run = smartPop(&sStack, &node, root, &trailBits, &level, &popLevel); // (27)
-			}
-			// endif (28)
-		}
-		// endwhile (29)
-
-		if (!run)
-			break;
-
-#if _BENCHMARK
+	if (node->ids[0] != -1) // leaf node
+	{
 		leavesVisited++;
-#endif
-		//intersect the ray against primatives in the current node (30)
-		double dist = intersectBody(bodies[node->id], *ray);
 
-		if (dist < output.dist)
+		for (int i = 0; i < IDS_MAX; i++)
 		{
-			output.dist = dist; // shorten the ray if a closer primative is hit (31)
-			output.hit_id = node->id;
+			int id = node->ids[i];
+			if (id < 0)
+			{
+				break;
+			}
+			else
+			{
+				double leafDist = 2e30;
+				int leafHit = intersectBody(bodies[id], ray, &leafDist);
+
+				if (leafHit && leafDist < state->dist)
+				{
+					state->dist = leafDist;
+					state->hit_id = id;
+
+				}
+			}
+		}
+	}
+	else
+	{
+
+		double dist1 = 1e30;
+		if (ray_aabb(ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, 1e30, &dist1))
+		{
+			BVH_traverse(node->right_ptr, ray, bodies, state);
 		}
 
-		run = smartPop(&sStack, &node, root, &trailBits, &level, &popLevel); // (32)
+		double dist2 = 1e30;
+		if (ray_aabb(ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, 1e30, &dist2))
+		{
+			BVH_traverse(node->left_ptr, ray, bodies, state);
+		}
 	}
-	// endwhile (33)
-
-	return output;
-}
-
-// pushes a BVHNode onto the stack
-static void push(ShortStack *stack, BVHNode** node_ptr_ptr)
-{
-	if (stack->count < MAX_SHORT_STACK_SIZE)
-	{
-		stack->nodeStack[stack->count] = *node_ptr_ptr;
-		stack->count++;
-	}
-}
-
-// pops a BVHNode from the stack
-static BVHNode* pop(ShortStack* stack)
-{
-	if (stack->count > 0)
-	{
-		return stack->nodeStack[--stack->count];
-	}
-
-	return NULL;
-}
-
-// returns 0 if it is time to terminate traversal
-static char smartPop(ShortStack* stack,
-	BVHNode** node_ptr_ptr,
-	const BVHNode* root_ptr,
-	unsigned long* trailBits_ptr,
-	unsigned int* level_ptr,
-	unsigned int* popLevel_ptr)
-{
-	// find largest i <= level such that trail[i] == 0
-	int i = (int)(*level_ptr);
-	while (i > 0 && bitCheck(*trailBits_ptr, (unsigned int)i) != 0)// (34)
-	{
-		i--;
-	}
-
-	*level_ptr = (unsigned int)i;
-
-	// trail[level] = 1 
-	bitSet(trailBits_ptr, *level_ptr);// (35)
-
-	// clear bits above level: keep bits [0 .. level]
-	if (*level_ptr + 1 >= sizeof(unsigned long) * 8)
-	{
-		// if we occupy the full word, mask = all ones
-		// do nothing (no bits above to clear)
-	}
-	else 
-	{
-		unsigned long mask = (1UL << (*level_ptr + 1)) - 1UL;
-		*trailBits_ptr &= mask;
-	}
-
-	// if sentinel bit (bit 0 here) is set -> terminate traversal
-	if (bitCheck(*trailBits_ptr, 0))
-	{
-		return 0; // terminate (37)
-	}
-
-	*popLevel_ptr = *level_ptr; // (38)
-
-	if (stack->count == 0) // (39)
-	{
-		*node_ptr_ptr = (BVHNode*)root_ptr; // restart traversal
-		*level_ptr = 0;
-	}
-	else // (42)
-	{
-		*node_ptr_ptr = pop(stack); //(43)
-	}
-
-	return 1;
 }
 
 
@@ -626,16 +507,16 @@ int BVH_validateTree(BVHNode* node)
 	}
 
 	// if branch node continue
-	if (node->id == -1)
+	if (node->ids[0] == -1)
 	{
 		if (!BVH_validateTree(node->left_ptr))
 		{
 
-			printf("(left node parent) data: %d\n", node->id);
+			printf("(left node parent) data[0]: %d\n", node->ids[0]);
 		}
 		if (!BVH_validateTree(node->right_ptr))
 		{
-			printf("(right node parent) data: %d\n", node->id);
+			printf("(right node parent) data[0]: %d\n", node->ids[0]);
 		}
 	}
 
@@ -657,10 +538,19 @@ static void BVH_PrintNode(const BVHNode* node, int depth)
 		printf("%c%c", 192, 196);
 
 	// print node info
-	if (node->id == -1)
+	if (node->ids[0] == -1)
+	{
 		printf("Branch Node\n");
+	}
 	else
-		printf("Leaf Node (id=%d)\n", node->id);
+	{
+		printf("Leaf Node ");
+		for (int i = 0; i < IDS_MAX; i++)
+		{
+			printf("(id=%d) ", node->ids[i]);
+		}
+		printf("\n");
+	}
 
 	// print bounds
 	for (int i = 0; i < depth; ++i)

@@ -13,7 +13,7 @@ void create_ray(Ray* ray, Vector3 origin, Vector3 direction)
 	ray->sign[2] = (ray->invdir.z < 0);
 }
 
-int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax, double *dist_ptr)
+int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax_limit, double *dist_ptr)
 {
 	//Based on: Robust BVH Ray Traversal by Thiago Ize & Solid Angle
 
@@ -21,20 +21,34 @@ int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax, double *dist_ptr)
 	bounds[0] = min; // min
 	bounds[1] = max; // max
 
-	double tmin = 0, txmin, txmax, tymin, tymax, tzmin, tzmax;
-	txmin = (bounds[ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
-	txmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
-	tymin = (bounds[ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
-	tymax = (bounds[1 - ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
-	tzmin = (bounds[ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
-	tzmax = (bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
-	tmin = max(tzmin, max(tymin, max(txmin, tmin)));
-	tmax = min(tzmax, min(tymax, min(txmax, tmax)));
-	tmax *= 1.00000024;
+	double txmin = (bounds[ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
+	double txmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
+	double tymin = (bounds[ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
+	double tymax = (bounds[1 - ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
+	double tzmin = (bounds[ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
+	double tzmax = (bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
 
+	// Combine the slabs
+	double tmin = fmax(fmax(txmin, tymin), tzmin);
+	double tmax = fmin(fmin(txmax, tymax), tzmax);
+
+	// No hit if range is invalid or intersection is behind the ray
+	if (tmax < 0 || tmin > tmax)
+		return 0;
+
+	// If the ray starts inside the box
+	if (tmin < 0 && tmax > 0) {
+		*dist_ptr = 0.0;
+		return 1;
+	}
+
+	// If the intersection is farther than the allowed limit, skip
+	if (tmin > tmax_limit)
+		return 0;
+
+	// Return the nearest valid distance
 	*dist_ptr = tmin;
-
-	return (tmax > 0 || tmin > 0) && tmax > tmin;
+	return 1;
 }
 
 int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
@@ -48,7 +62,7 @@ int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
 	*dist_ptr = direct_dist - fast_cos(angle) * sphere.sphere.radius;
 
 	double a = fast_sin(angle) * direct_dist;
-	if (a < sphere.sphere.radius && fast_cos(angle) > 0)
+	if (a <= sphere.sphere.radius && fast_cos(angle) >= 0)
 	{
 
 		return 1;
@@ -143,36 +157,25 @@ int rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHi
 	return 1;
 }
 
-double intersectBody(Body body, Ray ray)
+int intersectBody(Body body, Ray ray, double* dist_ptr)
 {
-	double dist = 1e30;
 
 	if (body.type == SHAPE_SPHERE)
 	{
-		if (raySphereIntersection(body, ray, &dist))
+		if (raySphereIntersection(body, ray, dist_ptr))
 		{
-			return dist;
+			return 1;
 		}
 	}
 	else if (body.type == SHAPE_BOX)
 	{
-		Vector3 localHitPoint = { 0 };
+		Vector3 localHitPoint = { 0, 0, 0 };
 
-		if (rayBoxIntersection(body, ray, &dist, &localHitPoint))
+		if (rayBoxIntersection(body, ray, dist_ptr, &localHitPoint))
 		{
-			return dist;
+			return 1;
 		}
 	}
-	else if (body.type == SHAPE_PLANE)
-	{
-		// not  in a bvh
-		return dist;
-	}
-	else
-	{
-		// unknown shape
-		return dist;
-	}
 
-	return dist;
+	return 0;
 }

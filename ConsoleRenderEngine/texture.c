@@ -14,14 +14,15 @@ char texture_ValToChar(BYTE value)
 
 int texture_sample(Texture* texture_ptr, Vector2 pos, BYTE RGBA[4])
 {
+    float scale = texture_ptr->uvScale;
     int index = 0;
     switch (texture_ptr->texMode)
     {
         case 0:
-            index = (int)(pos.y * texture_ptr->height) * texture_ptr->stride + (int)(pos.x * texture_ptr->width) * texture_ptr->byteCount;
+            index = (int)(pos.y * scale * texture_ptr->height) * texture_ptr->stride + (int)(pos.x* scale * texture_ptr->width) * texture_ptr->byteCount;
             break;
         case 1:
-            index = (int)(((pos.y < 0) + fmod(pos.y, 1)) * texture_ptr->height) * texture_ptr->stride + (int)(((pos.x < 0) + fmod(pos.x, 1)) * texture_ptr->width) * texture_ptr->byteCount;
+            index = (int)(((pos.y * scale < 0) + fmod(pos.y * scale, 1)) * texture_ptr->height) * texture_ptr->stride + (int)(((pos.x * scale < 0) + fmod(pos.x * scale, 1)) * texture_ptr->width) * texture_ptr->byteCount;
             break;
     }
     // snap to pixel

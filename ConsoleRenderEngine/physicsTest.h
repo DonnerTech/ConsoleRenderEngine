@@ -7,9 +7,8 @@
 #include "renderEngine.h"
 #include "vector2.h"
 
-//#include <windows.h>
-
-
 void physics_test(void);
+
+void bvh_test(void);
 
 #endif

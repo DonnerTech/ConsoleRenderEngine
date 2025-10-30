@@ -26,6 +26,8 @@ typedef struct {
 
 double deltaTime;
 
+void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth);
+
 int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
 int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);

@@ -15,6 +15,7 @@
 
 typedef struct {
 
+	float uvScale;
 	BYTE texMode;
 	BYTE byteCount;
 	UINT width;		// image width

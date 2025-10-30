@@ -1,24 +1,28 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 100
+#define BODY_COUNT 1000
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
 
 void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle, double dt);
 
+void freeCam(Vector3* camera_pos, Quaternion* camera_angle, double dt);
+
+void randomizePositions(Body* bodies, int count, double distance);
+
 void physics_test(void)
 {
 	PhysicsWorld world;
 
 	// initialize the world with earth's gravity
-	physicsWorld_Init(&world, (Vector3) { 0.0, 0.981, 0.0 });
-	
+	physicsWorld_Init(&world, (Vector3) { 0.0, 9.81, 0.0 }); // 9.81
+
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
 		// creates a sphere
-		double size = 0.2;
-		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - size * i, 2.0 }, vector3_scale(vector3_random(), 5.5));
+		double size = 0.5;
+		Vector3 position = vector3_add((Vector3) { 0.0, -2.5 - size * i, 2.0 }, vector3_scale(vector3_random(), 2));
 
 		RigidBody sphere = rb_create_sphere(position, size, 1.0);
 		sphere.restitution = 1;
@@ -60,30 +64,32 @@ void physics_test(void)
 	Vector3 camera_pos = { 0 };
 
 	Texture *texture = (Texture*)malloc(sizeof(Texture));
-	if (texLoader_LoadTexture(texture, L"textures\\texture_test.png") == 0)
+	if (texture == NULL || texLoader_LoadTexture(texture, L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png") == 0)
 	{
 		printf("Texture Load Fail");
 		return;
 	}
+	texture[0].uvScale = 0.0125f;
 
 	int* textureIDs = calloc(world.body_count, sizeof(int));
 
 	// update loop
 	while (isRunning)
 	{
+
 		// update physics
 		sim_frequency = 0;
 		for (int i = 0; i < 3; i++)
 		{
-			playerController(&world.rigidbodies[0], camera_angle);
+			//playerController(&world.rigidbodies[0], camera_angle);
 
 			// update
 			physicsWorld_Update(&world, 0.00001 * deltaTime); // 16% realtime
 			sim_frequency++;
 		}
 
-		cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, deltaTime);
-
+		//cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, deltaTime);
+		freeCam(&camera_pos, &camera_angle, deltaTime);
 
 		//rendering
 		if (!renderer_raytrace(world.bodies, textureIDs, texture, world.body_count, camera_pos, camera_angle, 90.0))
@@ -142,6 +148,105 @@ void physics_test(void)
 	end();
 
 	return 0;
+}
+
+void bvh_test(void)
+{
+	
+	Body bodies[BODY_COUNT] = { 0 };
+
+	for (int i = 0; i < BODY_COUNT; i++)
+	{
+		bodies[i].type = SHAPE_SPHERE;
+		bodies[i].sphere.radius = 0.2;
+		bodies[i].orientation = quat_identity();
+	}
+
+	randomizePositions(bodies, BODY_COUNT, 40);
+
+	// inits the renderer
+	int init_status = userInit();
+	if (init_status != 0)
+	{
+		return init_status;
+	}
+
+	bool isRunning = true;
+	int tick = 0;
+	double sim_frequency = 0;
+	resetDeltaTime();
+	system("cls");
+
+	Quaternion camera_angle = quat_from_axis_angle((Vector3) { 1, 0, 0 }, -3.14 / 8.0);
+	Vector3 camera_pos = { 0 };
+
+	Texture* texture = (Texture*)malloc(sizeof(Texture));
+	if (texLoader_LoadTexture(texture, L"textures\\texture_test.png") == 0)
+	{
+		printf("Texture Load Fail");
+		return;
+	}
+
+	int* textureIDs = calloc(BODY_COUNT, sizeof(int));
+
+	// update loop
+	while (isRunning)
+	{
+		if (GetAsyncKeyState('R') & 0x8000)
+		{
+			randomizePositions(bodies,  BODY_COUNT, 40);
+		}
+
+		freeCam(&camera_pos, &camera_angle, deltaTime);
+
+		//rendering
+		if (!renderer_raytrace(bodies, textureIDs, texture, BODY_COUNT, camera_pos, camera_angle, 90.0))
+		{
+			printf("RT Error!");
+			system("pause");
+		}
+
+		if (GetAsyncKeyState('T') & 0x8000)
+		{
+			BVHNode* node = BVH_createTree(bodies, BODY_COUNT);
+			BVH_DebugPrint(node);
+			system("pause");
+			system("cls");
+		}
+
+		// send frame to console
+		renderFrame();
+
+		// DEBUG INFO
+
+		printf("object count: %d \n", BODY_COUNT);
+
+		printf("FPS: %.2lf\n", 1000 / deltaTime);
+
+		// frame timing
+		printfFrameTimes(16);
+
+		tick++;
+
+		if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+			isRunning = false;
+		}
+	}
+
+	free(textureIDs);
+	texLoader_FreeTexture(texture);
+
+	end();
+
+	return 0;
+}
+
+void randomizePositions(Body* bodies, int count, double distance)
+{
+	for (int i = 0; i < count; i++)
+	{
+		bodies[i].position = vector3_add((Vector3) { 0.0, 0.0, 0.0 }, vector3_scale(vector3_random(), distance));
+	}
 }
 
 void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle, double dt)
@@ -207,4 +312,55 @@ void playerController(RigidBody *player, Quaternion rotation)
 	{
 		player->angularVelocity = (Vector3){ 0,0,0 };
 	}
+}
+
+void freeCam(Vector3* camera_pos, Quaternion* camera_angle, double dt)
+{
+	const double moveSpeed = 0.25;
+	const double rotSpeed = 4.0;
+
+	Vector3 move = { 0 };
+	double yawInput = 0;
+	double pitchInput = 0;
+
+	// --- Movement input ---
+	if (GetAsyncKeyState('W') & 0x8000) move.z += 1;
+	if (GetAsyncKeyState('S') & 0x8000) move.z -= 1;
+	if (GetAsyncKeyState('A') & 0x8000) move.x -= 1;
+	if (GetAsyncKeyState('D') & 0x8000) move.x += 1;
+	if (GetAsyncKeyState('E') & 0x8000) move.y += 1;
+	if (GetAsyncKeyState('Q') & 0x8000) move.y -= 1;
+
+	// --- Rotation input ---
+	if (GetAsyncKeyState(VK_UP) & 0x8000)   pitchInput += 1;
+	if (GetAsyncKeyState(VK_DOWN) & 0x8000) pitchInput -= 1;
+	if (GetAsyncKeyState(VK_LEFT) & 0x8000) yawInput -= 1;
+	if (GetAsyncKeyState(VK_RIGHT) & 0x8000) yawInput += 1;
+
+	// --- Apply yaw in world space ---
+	Quaternion yawRot = quat_from_axis_angle((Vector3) { 0, 1, 0 }, yawInput* rotSpeed* dt / 16 * (PI / 180.0));
+	*camera_angle = quat_multiply(yawRot, *camera_angle);
+
+	// --- Apply pitch in camera's local space ---
+	Vector3 right = quat_rotate_vector(*camera_angle, (Vector3) { 1, 0, 0 });
+	Quaternion pitchRot = quat_from_axis_angle(right, pitchInput * rotSpeed * dt / 16 * (PI / 180.0));
+	*camera_angle = quat_multiply(pitchRot, *camera_angle);
+
+	// --- Normalize quaternion to avoid drift ---
+	*camera_angle = quat_normalize(*camera_angle);
+
+	// --- Movement ---
+	Vector3 forward = quat_rotate_vector(*camera_angle, (Vector3) { 0, 0, 1 });
+	right = quat_rotate_vector(*camera_angle, (Vector3) { 1, 0, 0 });
+	Vector3 up = (Vector3){ 0, 1, 0 };
+
+	Vector3 delta = vector3_add(
+		vector3_add(
+			vector3_scale(forward, move.z * moveSpeed * dt / 16),
+			vector3_scale(right, move.x * moveSpeed * dt / 16)
+		),
+		vector3_scale(up, move.y * moveSpeed * dt / 16)
+	);
+
+	*camera_pos = vector3_add(*camera_pos, delta);
 }
