@@ -371,7 +371,7 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 	// leaf node
 	if (end - begin < IDS_MAX)
 	{
-		node->bounds = bounds_list[begin];
+		node->bounds = bounds_list[mortonIDpair_list[begin].id];
 
 		// initialize to -1;
 		int i = 0;
@@ -385,7 +385,7 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 		do
 		{
 			node->ids[i] = mortonIDpair_list[begin].id;
-			node->bounds = Bounds_union(node->bounds, bounds_list[begin]);
+			node->bounds = Bounds_union(node->bounds, bounds_list[mortonIDpair_list[begin].id]);
 			i++;
 		} while (begin++ != end);
 
@@ -453,16 +453,20 @@ void BVH_traverse(BVHNode* node, const Ray ray, Body* bodies, RayHit* state)
 		{
 			int id = node->ids[i];
 			if (id < 0)
-				continue;
-
-			double leafDist = 1e30;
-			int leafHit = intersectBody(bodies[id], ray, &leafDist);
-
-			if (leafHit && leafDist < state->dist)
 			{
-				state->dist = leafDist;
-				state->hit_id = id;
+				break;
+			}
+			else
+			{
+				double leafDist = 2e30;
+				int leafHit = intersectBody(bodies[id], ray, &leafDist);
 
+				if (leafHit && leafDist < state->dist)
+				{
+					state->dist = leafDist;
+					state->hit_id = id;
+
+				}
 			}
 		}
 	}

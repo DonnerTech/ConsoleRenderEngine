@@ -171,7 +171,10 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 
 
 	//debug
+
+#if _DEBUG || _BENCHMARK
 	ray_bvh(RGBAout, BVHroot, ray, 0);
+#endif
 }
 
 void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth)
@@ -182,7 +185,7 @@ void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth)
 	double d;
 	if (ray_aabb(ray, node->bounds.min, node->bounds.max, 1e30, &d))
 	{
-		BYTE color[4] = { max(255 - depth,0), 20, min(depth,255) ,252 };
+		BYTE color[4] = { max(255 - depth,0), 20, min(depth,255) ,240 };
 		overlayColor(color, RGBAout);
 	}
 
@@ -313,7 +316,7 @@ int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int co
 	rendertimeClock = clock();
 
 	//create bvh tree
-	BVHNode* BVHroot = BVH_createTree(bodies, count-1);
+	BVHNode* BVHroot = BVH_createTree(bodies, count);
 
 	//BVH_DebugPrint(BVHroot);
 	//system("pause");

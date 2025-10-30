@@ -33,7 +33,7 @@ typedef struct {
 	Vector3 max;
 } Bounds;
 
-#define IDS_MAX 1
+#define IDS_MAX 4
 
 typedef struct BVHNode {
 	Bounds bounds; // the nodes bounding volume

@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 3
+#define BODY_COUNT 100
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -9,7 +9,7 @@ void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_an
 
 void freeCam(Vector3* camera_pos, Quaternion* camera_angle, double dt);
 
-void randomizePositions(Body* bodies, int count);
+void randomizePositions(Body* bodies, int count, double distance);
 
 void physics_test(void)
 {
@@ -92,7 +92,7 @@ void physics_test(void)
 		freeCam(&camera_pos, &camera_angle, deltaTime);
 
 		//rendering
-		if (!renderer_raytrace_b(world.bodies, textureIDs, texture, world.body_count, camera_pos, camera_angle, 90.0))
+		if (!renderer_raytrace(world.bodies, textureIDs, texture, world.body_count, camera_pos, camera_angle, 90.0))
 		{
 			printf("RT Error!");
 			system("pause");
@@ -162,7 +162,7 @@ void bvh_test(void)
 		bodies[i].orientation = quat_identity();
 	}
 
-	randomizePositions(bodies, BODY_COUNT);
+	randomizePositions(bodies, BODY_COUNT, 40);
 
 	// inits the renderer
 	int init_status = userInit();
@@ -194,16 +194,24 @@ void bvh_test(void)
 	{
 		if (GetAsyncKeyState('R') & 0x8000)
 		{
-			randomizePositions(bodies,  BODY_COUNT);
+			randomizePositions(bodies,  BODY_COUNT, 40);
 		}
 
 		freeCam(&camera_pos, &camera_angle, deltaTime);
 
 		//rendering
-		if (!renderer_raytrace_b(bodies, textureIDs, texture, BODY_COUNT, camera_pos, camera_angle, 90.0))
+		if (!renderer_raytrace(bodies, textureIDs, texture, BODY_COUNT, camera_pos, camera_angle, 90.0))
 		{
 			printf("RT Error!");
 			system("pause");
+		}
+
+		if (GetAsyncKeyState('T') & 0x8000)
+		{
+			BVHNode* node = BVH_createTree(bodies, BODY_COUNT);
+			BVH_DebugPrint(node);
+			system("pause");
+			system("cls");
 		}
 
 		// send frame to console
@@ -233,11 +241,11 @@ void bvh_test(void)
 	return 0;
 }
 
-void randomizePositions(Body* bodies, int count)
+void randomizePositions(Body* bodies, int count, double distance)
 {
 	for (int i = 0; i < count; i++)
 	{
-		bodies[i].position = vector3_add((Vector3) { 0.0, 0.0, 0.0 }, vector3_scale(vector3_random(), 4));
+		bodies[i].position = vector3_add((Vector3) { 0.0, 0.0, 0.0 }, vector3_scale(vector3_random(), distance));
 	}
 }
 
