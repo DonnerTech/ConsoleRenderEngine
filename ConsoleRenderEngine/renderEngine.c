@@ -151,17 +151,15 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 		{
 			minDist = dist;
 
-			texture_sample(textures, (Vector2) { localHitPoint.x, -localHitPoint.z }, RGBAout);
+			texture_sample(&textures[textureIDs[i]], (Vector2) { localHitPoint.x, -localHitPoint.z }, RGBAout);
 		}
 	}
 
 	//BYTE color[4] = { (BYTE)max(255 - (minDist * depthScalar), 1), 20, 200 ,252 };
 	//overlayColor(color, RGBAout);
 
-
-	//debug
-
 #if _DEBUG || _BENCHMARK
+	// render Bounding Volume Hierarchy
 	ray_bvh(RGBAout, BVHroot, ray, 0);
 #endif
 }

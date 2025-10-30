@@ -267,10 +267,15 @@ BVHNode* BVH_createTree(Body* body_list, int count)
 	Bounds sceneBounds = bodyBounds_list[0];
 
 	for (int i = 1; i < count; i++) {
-		bodyBounds_list[i] = BVH_calculateBounds(body_list[i]);
 
-		//sceneBounds.min = vector3_min(sceneBounds.min, bodyBounds_list[i].min);
-		//sceneBounds.max = vector3_max(sceneBounds.max, bodyBounds_list[i].max);
+		if (body_list[i].type == SHAPE_PLANE)
+		{
+			bodyBounds_list[i] = (Bounds){ sceneBounds.min, sceneBounds.min };
+		}
+		else
+		{
+			bodyBounds_list[i] = BVH_calculateBounds(body_list[i]);
+		}
 
 		sceneBounds = Bounds_union(sceneBounds, bodyBounds_list[i]);
 	}

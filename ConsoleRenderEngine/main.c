@@ -9,10 +9,7 @@
 
 int main(void)
 {
-	// seed the random number generator
 	srand((unsigned int)time(NULL));
-
-	//init trig tables
 	init_trig_tables();
 
 	printf("Welcome to CoralEngine. The Console based game engine.\n\n");
