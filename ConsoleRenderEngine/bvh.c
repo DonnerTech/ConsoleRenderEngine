@@ -479,16 +479,26 @@ void BVH_traverse(BVHNode* node, const Ray ray, Body* bodies, RayHit* state)
 	{
 
 		double dist1 = 1e30;
-		if (ray_aabb(ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, 1e30, &dist1))
-		{
-			BVH_traverse(node->right_ptr, ray, bodies, state);
-		}
-
+		int hit1 = ray_aabb(ray, node->right_ptr->bounds.min, node->right_ptr->bounds.max, state->dist, &dist1);
+	
 		double dist2 = 1e30;
-		if (ray_aabb(ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, 1e30, &dist2))
+		int hit2 = ray_aabb(ray, node->left_ptr->bounds.min, node->left_ptr->bounds.max, state->dist, &dist2);
+		
+		if (dist1 < dist2)
 		{
-			BVH_traverse(node->left_ptr, ray, bodies, state);
+			if(hit1)
+				BVH_traverse(node->right_ptr, ray, bodies, state);
+			if (hit2 && dist2 < state->dist)
+				BVH_traverse(node->left_ptr, ray, bodies, state);
 		}
+		else
+		{
+			if (hit2)
+				BVH_traverse(node->left_ptr, ray, bodies, state);
+			if (hit1 && dist1 < state->dist)
+				BVH_traverse(node->right_ptr, ray, bodies, state);
+		}
+	
 	}
 }
 
