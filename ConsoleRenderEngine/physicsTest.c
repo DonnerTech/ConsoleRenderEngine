@@ -106,20 +106,19 @@ void physics_test(void)
 		// print the object count
 		printf("object count: %d \n", world.body_count);
 
-		// print object - object data
+		//print object - object data
 		//for (int i = 0; i < world.body_count; i++)
 		//{
 		//	printf("obj %d pos: { %lf, %lf, %lf } \n", i, world.rigidbodies[i].body.position.x, world.rigidbodies[i].body.position.y, world.rigidbodies[i].body.position.z);
-		//
-		//	for (int j = i + 1; j < world.body_count; j++)
-		//	{
-		//		double average_restitution = (world.rigidbodies[i].restitution * world.rigidbodies[j].restitution) / 2.0;
-		//		double average_friction = (world.rigidbodies[i].friction * world.rigidbodies[j].friction) / 2.0;
-
-		//		printf("obj %d and obj %d: ", i, j);
-		//		printf("{ average_restitution: %lf ", average_restitution);
-		//		printf("average_friction: %lf }\n", average_friction);
-		//	}
+		//	printf("obj type: %d\n", world.rigidbodies[i].body.type);
+		//	//for (int j = i + 1; j < world.body_count; j++)
+		//	//{
+		//	//	double average_restitution = (world.rigidbodies[i].restitution * world.rigidbodies[j].restitution) / 2.0;
+		//	//	double average_friction = (world.rigidbodies[i].friction * world.rigidbodies[j].friction) / 2.0;
+		//	//	printf("obj %d and obj %d: ", i, j);
+		//	//	printf("{ average_restitution: %lf ", average_restitution);
+		//	//	printf("average_friction: %lf }\n", average_friction);
+		//	//}
 		//}
 
 		//Contact contact;

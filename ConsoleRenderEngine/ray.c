@@ -51,7 +51,7 @@ int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax_limit, double *dist_
 	return 1;
 }
 
-int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
+int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr, Vector3* localHitPoint, Vector3* normal)
 {
 	double direct_dist = vector3_magnitude(vector3_subtract(sphere.position, ray.origin));
 	double angle = vector3_angle(vector3_subtract(sphere.position, ray.origin), ray.direction);
@@ -64,14 +64,17 @@ int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr)
 	double a = fast_sin(angle) * direct_dist;
 	if (a <= sphere.sphere.radius && fast_cos(angle) >= 0)
 	{
+		Vector3 hitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, *dist_ptr));;
+
+		*localHitPoint = vector3_subtract(hitPoint, sphere.position);
+		*normal = vector3_normalize(*localHitPoint);
 
 		return 1;
 	}
-
 	return 0;
 }
 
-int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint)
+int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint, Vector3* normal)
 {
 	*dist_ptr = 1e30;
 
@@ -132,11 +135,14 @@ int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoi
 		*dist_ptr = tmin; // first hit
 
 	*localHitPoint = vector3_add(ba_ray.origin, vector3_scale(ba_ray.direction, *dist_ptr));
+	
+	//TODO: normal calculation
+	*normal = (Vector3){ 0,0,0 };
 
 	return 1;
 }
 
-int rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHitPoint)
+int rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHitPoint, Vector3* normal)
 {
 	double denom = vector3_dot(plane.plane.normal, ray.direction);
 
@@ -151,31 +157,48 @@ int rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHi
 	if (*dist_ptr < 0.0)
 		return 0;
 
-	// set the hit position (currently global)
+	// set the local hit position
 	*localHitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, *dist_ptr));
+	*normal = plane.plane.normal;
 
 	return 1;
 }
 
-int intersectBody(Body body, Ray ray, double* dist_ptr)
+RayHit intersectBody(Body body, int id, Ray ray)
 {
+	RayHit hit = (RayHit){ .dist = 1e30, .hit_id = NO_HIT, .localPosition = (Vector3){0,0,0}, .position = (Vector3){0,0,0}, .normal = (Vector3){0,0,0} };
 
-	if (body.type == SHAPE_SPHERE)
+	int didHit = 0;
+
+	switch (body.type)
 	{
-		if (raySphereIntersection(body, ray, dist_ptr))
+		case (SHAPE_SPHERE):
 		{
-			return 1;
+			didHit = (raySphereIntersection(body, ray, &hit.dist, &hit.localPosition, &hit.normal));
+			break;
+		}
+		case (SHAPE_BOX):
+		{
+			didHit = (rayBoxIntersection(body, ray, &hit.dist, &hit.localPosition, &hit.normal));
+			break;
+		}
+		case (SHAPE_PLANE):
+		{
+			didHit = (rayPlaneIntersection(body, ray, &hit.dist, &hit.localPosition, &hit.normal));
+			break;
+		}
+		default:
+		{
+			didHit = 0;
+			break;
 		}
 	}
-	else if (body.type == SHAPE_BOX)
-	{
-		Vector3 localHitPoint = { 0, 0, 0 };
 
-		if (rayBoxIntersection(body, ray, dist_ptr, &localHitPoint))
-		{
-			return 1;
-		}
+	if (didHit)
+	{
+		hit.hit_id = id;
+		hit.position = vector3_add(ray.origin, vector3_scale(ray.direction, hit.dist));
 	}
 
-	return 0;
+	return hit;
 }

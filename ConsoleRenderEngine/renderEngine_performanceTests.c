@@ -23,8 +23,7 @@ void testRaySphere(int iter)
 	clock_t start = clock();
 	for (int i = 0; i < iter; i++)
 	{
-		double dist;
-		raySphereIntersection(body[i], ray, &dist);
+		RayHit hit = intersectBody(body[i], i, ray);
 	}
 
 	free(body);
@@ -55,9 +54,7 @@ void testRayBox(int iter)
 	clock_t start = clock();
 	for (int i = 0; i < iter; i++)
 	{
-		double dist;
-		Vector3 hit;
-		rayBoxIntersection(body[i], ray, &dist, &hit);
+		RayHit hit = intersectBody(body[i], i, ray);
 	}
 
 	free(body);
@@ -88,8 +85,7 @@ void testRayPlane(int iter)
 	clock_t start = clock();
 	for (int i = 0; i < iter; i++)
 	{
-		double dist;
-		raySphereIntersection(body[i], ray, &dist);
+		RayHit hit = intersectBody(body[i], i, ray);
 	}
 
 	free(body);

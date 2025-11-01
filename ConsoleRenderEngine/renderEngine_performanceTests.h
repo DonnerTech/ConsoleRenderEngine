@@ -3,8 +3,8 @@
 #define RE_PTESTS_H
 
 #include "renderEngine.h"
-
 #include "bvh.h"
+#include "ray.h"
 
 void testRaySphere(int iter);
 

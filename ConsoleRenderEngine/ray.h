@@ -14,17 +14,28 @@ typedef struct {
 	int sign[3]; // sign for each axis
 } Ray;
 
+
+#define NO_HIT -1
+
+//fields:
+//	double dist
+//	int hit_id
+//	Vector3 position
+//	Vector3 localPosition
+//	Vector3 normal
+typedef struct RayHit {
+	double dist;
+	int hit_id;
+	Vector3 position;
+	Vector3 localPosition;
+	Vector3 normal;
+} RayHit;
+
 void create_ray(Ray* ray, Vector3 origin, Vector3 direction);
 
 int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax_limit, double* dist_ptr);
 
-int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr);
-
-int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint);
-
-int rayPlaneIntersection(Body plane, Ray ray, double* dist_ptr, Vector3* localHitPoint);
-
-int intersectBody(Body body, Ray ray, double* dist_ptr);
+RayHit intersectBody(Body body, int id, Ray ray);
 
 #endif // RAY_H
 

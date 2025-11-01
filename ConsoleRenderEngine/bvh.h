@@ -70,18 +70,8 @@ BVHNode* BVH_createSubTree(MortonIDPairs* mortonIDpair_list, Bounds* bounds_list
 
 void BVH_updateTreeBounds(BVHNode* node, Body* body_list);
 
-#define NO_HIT -1
-
-typedef struct RayHit {
-	double dist;
-	int hit_id;
-} RayHit;
-
 //BVH_traverse(...) traverses a bvh tree and returns a RayHit
 //if no bodies were hit then the value of hit_id is NO_HIT
-//RayHit:
-//    double dist: distance to the hit
-//    int hit_id: the id of the body that was hit
 void BVH_traverse(const BVHNode* node, const Ray ray, const Body* bodies, RayHit* state);
 
 // returns 1 if the tree is valid, 0 if invalid

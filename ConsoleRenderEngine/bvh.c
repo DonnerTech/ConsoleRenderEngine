@@ -461,15 +461,14 @@ void BVH_traverse(BVHNode* node, const Ray ray, Body* bodies, RayHit* state)
 			{
 				break;
 			}
-			else
+			else if(bodies[id].type != SHAPE_PLANE)
 			{
-				double leafDist = 2e30;
-				int leafHit = intersectBody(bodies[id], ray, &leafDist);
 
-				if (leafHit && leafDist < state->dist)
+				RayHit leafHit = intersectBody(bodies[id], id, ray);
+
+				if (leafHit.hit_id != NO_HIT && leafHit.dist < state->dist)
 				{
-					state->dist = leafDist;
-					state->hit_id = id;
+					*state = leafHit;
 
 				}
 			}
@@ -498,7 +497,6 @@ void BVH_traverse(BVHNode* node, const Ray ray, Body* bodies, RayHit* state)
 			if (hit1 && dist1 < state->dist)
 				BVH_traverse(node->right_ptr, ray, bodies, state);
 		}
-	
 	}
 }
 

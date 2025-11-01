@@ -29,7 +29,8 @@ void winPrintFrame()
 
 	int total = 6;
 
-	BYTE red = 0, green = 0, blue = 0;
+	// init red to not be the same as the first color so the color switching catches it
+	BYTE red = outputFrame.texture.pixeldata[0] == 0 ? 1 : 0, green = 0, blue = 0;
 
 	for (int i = 0; i < outputFrame.texture.imageSize; i += outputFrame.texture.byteCount)
 	{
@@ -95,14 +96,19 @@ int raysShot = 0;
 
 void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs, Texture* textures, int count, Ray ray)
 {
+	// initialize color
+	RGBAout[0] = 0;
+	RGBAout[1] = 0;
+	RGBAout[2] = 0;
+	RGBAout[3] = 255;
+
 	raysShot++;
 
 	const double depthScalar = 4e-1;
 
-	RayHit state = (RayHit){ 1e30, NO_HIT};
+	RayHit state = (RayHit){ .dist = 1e30, .hit_id = NO_HIT, .localPosition = (Vector3){0,0,0}, .position = (Vector3){0,0,0}, .normal = (Vector3){0,0,0} };
 
 	BVH_traverse(BVHroot, ray, bodies, &state);
-
 
 	//RGBAout[0] = (BYTE)max(255 - (state.dist * depthScalar), 1);
 	//RGBAout[1] = (BYTE)max(255 - (state.dist * depthScalar), 1);
@@ -144,14 +150,13 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 
 		if (bodies[i].type != SHAPE_PLANE) continue;
 
-		Vector3 localHitPoint = { 0, 0, 0 };
+		RayHit hit = intersectBody(bodies[i], i, ray);
 
-
-		if (rayPlaneIntersection(bodies[i], ray, &dist, &localHitPoint) && dist < minDist)
+		if (hit.hit_id != NO_HIT && hit.dist < minDist)
 		{
 			minDist = dist;
 
-			texture_sample(&textures[textureIDs[i]], (Vector2) { localHitPoint.x, -localHitPoint.z }, RGBAout);
+			texture_sample(&textures[textureIDs[i]], (Vector2) { hit.localPosition.x, -hit.localPosition.z }, RGBAout);
 		}
 	}
 
