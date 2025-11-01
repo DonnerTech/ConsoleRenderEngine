@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 1000
+#define BODY_COUNT 100
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -13,6 +13,46 @@ void randomizePositions(Body* bodies, int count, double distance);
 
 void physics_test(void)
 {
+	// INITIALIZE MATERIALS AND TEXTURES
+	const int mat_count = 3;
+
+	Material* mat_list = (Material*)malloc(sizeof(Material) * mat_count);
+
+	if (mat_list == NULL)
+	{
+		printf("Material List Allocation Fail");
+		return;
+	}
+
+	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 0, 0, 0, 255 }, 1);
+
+	const short gb_Filepath[59] = L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png";
+	if (mat_list[0].baseTexture == NULL || !texLoader_LoadTexture(mat_list[0].baseTexture, gb_Filepath))
+	{
+		printf("Texture Load Fail");
+		return;
+	}
+	mat_list[0].baseTexture->uvScale = 0.0125f;
+
+
+	create_material(&mat_list[1], PROJECT_TRIPLANER, (BYTE[4]) { 100, 100, 100, 255 }, 1);
+	texLoader_generateTexture(mat_list[1].baseTexture, 4, 2, 2);
+	texLoader_fillTexture(mat_list[1].baseTexture, (BYTE[4]) { 200, 150, 10, 255 });
+
+	create_material(&mat_list[2], PROJECT_TRIPLANER, (BYTE[4]) { 20, 20, 20, 255 }, 1);
+	texLoader_generateTexture(mat_list[2].baseTexture, 4, 2, 2);
+	texLoader_fillTexture(mat_list[2].baseTexture, (BYTE[4]) { 20, 150, 250, 255 });
+
+	short* matIDs = calloc(BODY_COUNT+1, sizeof(short));
+
+	if(matIDs == NULL)
+	{
+		printf("Material ID Initialization Failed");
+		return;
+	}
+
+	//INITIALIZE PHYSICS WORLD
+
 	PhysicsWorld world;
 
 	// initialize the world with earth's gravity
@@ -21,7 +61,9 @@ void physics_test(void)
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
 		// creates a sphere
-		double size = 0.5;
+		matIDs[world.body_count] = i % 2 + 1; // alternate between 1 and 2
+
+		double size = 0.5 + (double)(rand() % 1000) / 500;
 		Vector3 position = vector3_add((Vector3) { 0.0, -2.5 - size * i, 2.0 }, vector3_scale(vector3_random(), 2));
 
 		RigidBody sphere = rb_create_sphere(position, size, 1.0);
@@ -42,12 +84,14 @@ void physics_test(void)
 	
 
 	// creates the ground plane
+	matIDs[world.body_count] = 0;
 	RigidBody ground = rb_create_plane((Vector3) { 0.0, -1.0, 0.0 }, -1.5);
 	ground.restitution = 0.5;
 	ground.friction = 1;
 	physicsWorld_AddBody(&world, ground);
 
-	// inits the renderer
+
+	// INITIALIZE THE RENDERER
 	int init_status = userInit();
 	if (init_status != 0)
 	{
@@ -62,16 +106,6 @@ void physics_test(void)
 
 	Quaternion camera_angle = quat_from_axis_angle((Vector3) { 1, 0, 0 }, -3.14 / 8.0);
 	Vector3 camera_pos = { 0 };
-
-	Texture *texture = (Texture*)malloc(sizeof(Texture));
-	if (texture == NULL || texLoader_LoadTexture(texture, L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png") == 0)
-	{
-		printf("Texture Load Fail");
-		return;
-	}
-	texture[0].uvScale = 0.0125f;
-
-	int* textureIDs = calloc(world.body_count, sizeof(int));
 
 	// update loop
 	while (isRunning)
@@ -92,7 +126,7 @@ void physics_test(void)
 		freeCam(&camera_pos, &camera_angle, deltaTime);
 
 		//rendering
-		if (!renderer_raytrace(world.bodies, textureIDs, texture, world.body_count, camera_pos, camera_angle, 90.0))
+		if (!renderer_raytrace(world.bodies, matIDs, mat_list, world.body_count, camera_pos, camera_angle, 90.0))
 		{
 			printf("RT Error!");
 			system("pause");
@@ -141,8 +175,8 @@ void physics_test(void)
 		}
 	}
 
-	free(textureIDs);
-	texLoader_FreeTexture(texture);
+	free(matIDs);
+	free_material_list(mat_list, mat_count);
 
 	end();
 
@@ -151,11 +185,40 @@ void physics_test(void)
 
 void bvh_test(void)
 {
-	
+	// INITIALIZE MATERIALS AND TEXTURES
+	const int mat_count = 2;
+
+	Material* mat_list = (Material*)malloc(sizeof(Material) * mat_count);
+
+	if (mat_list == NULL)
+	{
+		printf("Material List Allocation Fail");
+		return;
+	}
+
+	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 200, 200, 200, 255 }, 1);
+
+	if (mat_list[0].baseTexture == NULL || texLoader_LoadTexture(mat_list[0].baseTexture, L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png") == 0)
+	{
+		printf("Texture Load Fail");
+		return;
+	}
+	mat_list[0].baseTexture->uvScale = 0.0125f;
+
+
+	create_material(&mat_list[1], PROJECT_TRIPLANER, (BYTE[4]) { 200, 50, 500, 255 }, 1);
+	texLoader_generateTexture(mat_list[1].baseTexture, 4, 2, 2);
+
+	short* matIDs = calloc(BODY_COUNT+1, sizeof(short));
+
+	// INITIALIZE BODIES
+
 	Body bodies[BODY_COUNT] = { 0 };
 
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
+		matIDs[i] = 1;
+
 		bodies[i].type = SHAPE_SPHERE;
 		bodies[i].sphere.radius = 0.2;
 		bodies[i].orientation = quat_identity();
@@ -163,7 +226,7 @@ void bvh_test(void)
 
 	randomizePositions(bodies, BODY_COUNT, 40);
 
-	// inits the renderer
+	// INITIALIZE THE RENDERER
 	int init_status = userInit();
 	if (init_status != 0)
 	{
@@ -179,15 +242,6 @@ void bvh_test(void)
 	Quaternion camera_angle = quat_from_axis_angle((Vector3) { 1, 0, 0 }, -3.14 / 8.0);
 	Vector3 camera_pos = { 0 };
 
-	Texture* texture = (Texture*)malloc(sizeof(Texture));
-	if (texLoader_LoadTexture(texture, L"textures\\texture_test.png") == 0)
-	{
-		printf("Texture Load Fail");
-		return;
-	}
-
-	int* textureIDs = calloc(BODY_COUNT, sizeof(int));
-
 	// update loop
 	while (isRunning)
 	{
@@ -199,7 +253,7 @@ void bvh_test(void)
 		freeCam(&camera_pos, &camera_angle, deltaTime);
 
 		//rendering
-		if (!renderer_raytrace(bodies, textureIDs, texture, BODY_COUNT, camera_pos, camera_angle, 90.0))
+		if (!renderer_raytrace(bodies, matIDs, mat_list, BODY_COUNT, camera_pos, camera_angle, 90.0))
 		{
 			printf("RT Error!");
 			system("pause");
@@ -232,8 +286,8 @@ void bvh_test(void)
 		}
 	}
 
-	free(textureIDs);
-	texLoader_FreeTexture(texture);
+	free(matIDs);
+	free_material_list(mat_list, mat_count);
 
 	end();
 

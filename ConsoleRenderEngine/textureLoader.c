@@ -99,18 +99,29 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
     return 1;
 }
 
-texLoader_generateTexture(Texture* texture, int byteCount, int width, int height)
+void texLoader_generateTexture(Texture* texture, int byteCount, int width, int height)
 {
     texture->texMode = TEXMODE_REPEATING;
     texture->uvScale = 1;
     texture->width = width;
     texture->height = height;
 
-    texture->byteCount = 4;
-    texture->stride = width * texture->byteCount; // 4 bytes per pixel
+    texture->byteCount = byteCount;
+    texture->stride = width * texture->byteCount;
     texture->imageSize = texture->stride * height;
     texture->pixeldata = (BYTE*)malloc(texture->imageSize);
 
+}
+
+void texLoader_fillTexture(Texture* texture, BYTE* color)
+{
+    for (int i = 0; i < texture->imageSize; i += texture->byteCount)
+    {
+        for (int n = 0; n < texture->byteCount; n++)
+        {
+            texture->pixeldata[i + n] = color[n];
+        }
+    }
 }
 
 

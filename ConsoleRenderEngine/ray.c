@@ -64,10 +64,11 @@ int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr, Vector3* local
 	double a = fast_sin(angle) * direct_dist;
 	if (a <= sphere.sphere.radius && fast_cos(angle) >= 0)
 	{
-		Vector3 hitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, *dist_ptr));;
+		Vector3 hitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, *dist_ptr));
 
 		*localHitPoint = vector3_subtract(hitPoint, sphere.position);
 		*normal = vector3_normalize(*localHitPoint);
+		*localHitPoint = quat_rotate_vector(sphere.orientation, *localHitPoint);
 
 		return 1;
 	}

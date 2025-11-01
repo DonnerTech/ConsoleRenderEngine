@@ -40,9 +40,9 @@ double vector3_angle(Vector3 a, Vector3 b)
     return acos(cos_theta);
 }
 
-Vector3 vector3_reflect(Vector3 ray, Vector3 normal)
+Vector3 vector3_reflect(Vector3 ray_dir, Vector3 normal)
 {
-    Vector3 result = vector3_subtract(ray, vector3_scale(normal,2 *vector3_dot(ray, normal)));
+    Vector3 result = vector3_subtract(ray_dir, vector3_scale(normal,2 *vector3_dot(ray_dir, normal)));
     return result;
 }
 

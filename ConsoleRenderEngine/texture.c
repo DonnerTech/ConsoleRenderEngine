@@ -15,27 +15,41 @@ char texture_ValToChar(BYTE value)
 int texture_sample(Texture* texture_ptr, Vector2 pos, BYTE RGBA[4])
 {
     float scale = texture_ptr->uvScale;
-    int index = 0;
+    float u = pos.x * scale;
+    float v = pos.y * scale;
+
+    // Handle wrapping / clamping
     switch (texture_ptr->texMode)
     {
-        case 0:
-            index = (int)(pos.y * scale * texture_ptr->height) * texture_ptr->stride + (int)(pos.x* scale * texture_ptr->width) * texture_ptr->byteCount;
-            break;
-        case 1:
-            index = (int)(((pos.y * scale < 0) + fmod(pos.y * scale, 1)) * texture_ptr->height) * texture_ptr->stride + (int)(((pos.x * scale < 0) + fmod(pos.x * scale, 1)) * texture_ptr->width) * texture_ptr->byteCount;
-            break;
-    }
-    // snap to pixel
-    index /= 4;
-    index *= 4;
+    case TEXMODE_CLAMPED:
+        u = fminf(fmaxf(u, 0.0f), 0.999999f);
+        v = fminf(fmaxf(v, 0.0f), 0.999999f);
+        break;
 
-    if (index - 4 > texture_ptr->imageSize || index < 0)
+    case TEXMODE_REPEATING:
+        u = u - floorf(u); // wrap to [0,1)
+        v = v - floorf(v); // wrap to [0,1)
+        break;
+    }
+
+    // Compute integer pixel coordinates
+    int x = (int)(u * texture_ptr->width);
+    int y = (int)(v * texture_ptr->height);
+
+    // Texture bounds Clamping
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x >= (int)texture_ptr->width)  x = texture_ptr->width - 1;
+    if (y >= (int)texture_ptr->height) y = texture_ptr->height - 1;
+
+    int index = y * texture_ptr->stride + x * texture_ptr->byteCount;
+
+    if (index < 0 || index + texture_ptr->byteCount >(int)texture_ptr->imageSize)
         return 0;
 
-    RGBA[0] = texture_ptr->pixeldata[index];
-    RGBA[1] = texture_ptr->pixeldata[index+1];
-    RGBA[2] = texture_ptr->pixeldata[index+2];
-    RGBA[3] = texture_ptr->pixeldata[index+3];
+    // Copy pixel bytes
+    for (int n = 0; n < texture_ptr->byteCount; n++)
+        RGBA[n] = texture_ptr->pixeldata[index + n];
 
     return 1;
 }

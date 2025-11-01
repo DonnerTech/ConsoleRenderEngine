@@ -189,6 +189,7 @@
     <ClCompile Include="bvh.c" />
     <ClCompile Include="fastTrig.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="material.c" />
     <ClCompile Include="matrix3x3.c" />
     <ClCompile Include="physicsEngine.c" />
     <ClCompile Include="physicsTest.c" />
@@ -209,6 +210,7 @@
   <ItemGroup>
     <ClInclude Include="bvh.h" />
     <ClInclude Include="fastTrig.h" />
+    <ClInclude Include="material.h" />
     <ClInclude Include="matrix3x3.h" />
     <ClInclude Include="physicsEngine.h" />
     <ClInclude Include="physicsTest.h" />

@@ -15,6 +15,7 @@
 #include "ray.h"
 #include "textureLoader.h"
 #include "bvh.h"
+#include "material.h"
 
 #include "fastTrig.h"
 
@@ -26,11 +27,11 @@ typedef struct {
 
 double deltaTime;
 
-void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth);
+static void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth);
 
-int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
+int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
-int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
+int renderer_raytrace_b(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
 int init(int w, int h);
 
@@ -42,6 +43,7 @@ void renderFrame(void);
 
 void printfFrameTimes(double targetms);
 
+//end program (cleanup)
 void end();
 
 #endif /* RENDER_ENGINE */

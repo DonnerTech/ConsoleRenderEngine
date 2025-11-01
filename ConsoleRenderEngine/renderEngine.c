@@ -3,6 +3,7 @@
 #include "renderEngine.h"
 
 #define NUM_THREADS 32
+#define MAX_RT_DEPTH 2
 
 //int width, height;
 //char* outputFrame;
@@ -74,7 +75,7 @@ void winPrintFrame()
 	printf("blitting time: %d ms\n", clock() - printStart);
 }
 
-// color overlay with alpha support
+// overlay color mixing with alpha support
 void overlayColor(BYTE RGBAin[4], BYTE RGBAout[4])
 {
 	//	alpha01 = (1 - a0)·a1 + a0
@@ -92,9 +93,45 @@ void overlayColor(BYTE RGBAin[4], BYTE RGBAout[4])
 	RGBAout[3] = (BYTE)alpha01;
 }
 
+// addative color mixing
+void addativeColor(BYTE RGBAin[4], BYTE RGBAout[4])
+{
+	float a0 = RGBAin[3] / 255.0f;
+	float a1 = RGBAout[3] / 255.0f;
+
+	float a01 = fminf(1.0f, a0 + a1);
+
+	for (int i = 0; i < 3; i++) {
+		float c0 = RGBAin[i] / 255.0f;
+		float c1 = RGBAout[i] / 255.0f;
+		float c = c0 * a0 + c1 * a1;
+		RGBAout[i] = (BYTE)(fminf(1.0f, c) * 255.0f);
+	}
+
+	RGBAout[3] = (BYTE)(a01 * 255.0f);
+}
+
+// color multiply
+void multiplyColor(BYTE RGBAin[4], BYTE RGBAout[4])
+{
+	float a0 = RGBAin[3] / 255.0f;
+	float a1 = RGBAout[3] / 255.0f;
+	float a01 = a0 + a1 * (1 - a0);
+
+	for (int i = 0; i < 3; i++) {
+		float c0 = RGBAin[i] / 255.0f;
+		float c1 = RGBAout[i] / 255.0f;
+		float c = (c1 * (1 - a0)) + (c0 * c1) * a0;
+		RGBAout[i] = (BYTE)(c * 255.0f);
+	}
+
+	RGBAout[3] = (BYTE)(a01 * 255.0f);
+}
+
+
 int raysShot = 0;
 
-void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs, Texture* textures, int count, Ray ray)
+void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Material* mats, int count, Ray ray, int depth)
 {
 	// initialize color
 	RGBAout[0] = 0;
@@ -107,17 +144,10 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 	const double depthScalar = 4e-1;
 
 	RayHit state = (RayHit){ .dist = 1e30, .hit_id = NO_HIT, .localPosition = (Vector3){0,0,0}, .position = (Vector3){0,0,0}, .normal = (Vector3){0,0,0} };
+	Material* mat_ptr = mats;
 
 	BVH_traverse(BVHroot, ray, bodies, &state);
 
-	//RGBAout[0] = (BYTE)max(255 - (state.dist * depthScalar), 1);
-	//RGBAout[1] = (BYTE)max(255 - (state.dist * depthScalar), 1);
-	//RGBAout[2] = (BYTE)max(255 - (state.dist * depthScalar), 1);
-	//RGBAout[3] = 255;
-
-	//return;
-
-	Vector3 localHitPoint = { 0 };
 	double minDist = 1e30;
 	double dist = 0;
 
@@ -127,21 +157,13 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 		if (bodies[state.hit_id].type == SHAPE_SPHERE)
 		{
 			minDist = state.dist;
-
-			RGBAout[0] = 20;
-			RGBAout[1] = 200;
-			RGBAout[2] = 20;
-			RGBAout[3] = 255;
 		}
 		else if (bodies[state.hit_id].type == SHAPE_BOX)
 		{
 			minDist = state.dist;
-
-			RGBAout[0] = 20;
-			RGBAout[1] = 20;
-			RGBAout[2] = 200;
-			RGBAout[3] = 255;
 		}
+
+		mat_ptr = &mats[matIDs[state.hit_id]];
 	}
 
 	// handle planes (not in bvh)
@@ -150,26 +172,125 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, BYTE* textureIDs,
 
 		if (bodies[i].type != SHAPE_PLANE) continue;
 
-		RayHit hit = intersectBody(bodies[i], i, ray);
+		RayHit planeHit  = intersectBody(bodies[i], i, ray);
 
-		if (hit.hit_id != NO_HIT && hit.dist < minDist)
+		if (planeHit.hit_id != NO_HIT && planeHit.dist < minDist)
 		{
 			minDist = dist;
 
-			texture_sample(&textures[textureIDs[i]], (Vector2) { hit.localPosition.x, -hit.localPosition.z }, RGBAout);
+			state = planeHit;
+			mat_ptr = &mats[matIDs[planeHit.hit_id]];
 		}
 	}
 
-	//BYTE color[4] = { (BYTE)max(255 - (minDist * depthScalar), 1), 20, 200 ,252 };
-	//overlayColor(color, RGBAout);
+	// ---texture mapping---
+	if (state.hit_id != NO_HIT)
+	{
+		Material currentMat = mats[matIDs[state.hit_id]];
 
-#if _DEBUG || _BENCHMARK
+		// planar projection
+		switch (currentMat.projecton)
+		{
+			case(PROJECT_PLANER):
+			{
+				texture_sample(currentMat.baseTexture, (Vector2) { state.localPosition.x, -state.localPosition.z }, RGBAout);
+				break;
+			}
+			case(PROJECT_TRIPLANER):
+			{
+				/* glsl sudocode:
+				vec3 n = abs(normalize(normal));
+				vec3 xProj = position.yz;
+				vec3 yProj = position.xz;
+				vec3 zProj = position.xy;
+				vec4 xTex = texture(tex, xProj * scale);
+				vec4 yTex = texture(tex, yProj * scale);
+				vec4 zTex = texture(tex, zProj * scale);
+				vec4 color = (xTex * n.x + yTex * n.y + zTex * n.z) / (n.x + n.y + n.z);
+				*/
+
+				Vector3 n = (Vector3){ fabs(state.normal.x), fabs(state.normal.y), fabs(state.normal.z) };
+				Vector2 xProj = (Vector2){ -state.localPosition.y, -state.localPosition.z };
+				Vector2 yProj = (Vector2){ state.localPosition.x, -state.localPosition.z };
+				Vector2 zProj = (Vector2){ state.localPosition.x, -state.localPosition.y };
+
+				BYTE cx[4], cy[4], cz[4];
+				texture_sample(currentMat.baseTexture, xProj, cx);
+				texture_sample(currentMat.baseTexture, yProj, cy);
+				texture_sample(currentMat.baseTexture, zProj, cz);
+
+				// average them into one
+				float sum = n.x + n.y + n.z;
+				if (sum == 0.0f) sum = 1.0f;
+
+				for (int i = 0; i < 4; i++) 
+				{
+					RGBAout[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
+				}
+				break;
+			}
+			case(PROJECT_SPHERICAL):
+			{
+				/* glsl sudocode:
+				vec3 p = normalize(position);
+				float u = atan(p.z, p.x) / (2.0 * PI) + 0.5;
+				float v = asin(p.y) / PI + 0.5;
+				vec2 uv = vec2(u, v);
+				vec4 color = texture(tex, uv * scale);
+				*/
+				Vector3 p_norm = vector3_normalize(state.position);
+				Vector2 uv = (Vector2){
+					atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
+					asinf(p_norm.y) / PI + 0.5f
+				};
+				texture_sample(currentMat.baseTexture, uv, RGBAout);
+
+				break;
+			}
+		}
+	}
+
+	// ---recursive reflections---
+	if (state.hit_id != NO_HIT && mat_ptr->reflectivity > 0 && depth < MAX_RT_DEPTH)
+	{
+
+		Vector3 ref_dir = vector3_reflect(ray.direction, state.normal);
+		Ray rayR;
+		create_ray(&rayR, state.position, ref_dir);
+
+		//const double EPS = 1e30;
+		//create_ray(&rayR, vector3_add(state.position, vector3_scale(state.normal, EPS)), ref_dir);
+
+		BYTE ref_color[4];
+
+		raytrace(ref_color, BVHroot, bodies, matIDs, mats, count, rayR, depth + 1);
+
+		multiplyColor(mat_ptr->specularColor, ref_color);
+
+		ref_color[0] *= mat_ptr->reflectivity;
+		ref_color[1] *= mat_ptr->reflectivity;
+		ref_color[2] *= mat_ptr->reflectivity;
+		ref_color[3] *= mat_ptr->reflectivity;
+
+		addativeColor(ref_color, RGBAout);
+	}
+
+	// ambient sky light
+	if (state.hit_id == NO_HIT)
+	{
+		RGBAout[0] = 200;
+		RGBAout[1] = 200;
+		RGBAout[2] = 230;
+		RGBAout[3] = 255;
+	}
+
+#if _DEBUG
 	// render Bounding Volume Hierarchy
 	ray_bvh(RGBAout, BVHroot, ray, 0);
 #endif
 }
 
-void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth)
+static void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth)
 {
 	if (node == NULL)
 		return;
@@ -177,21 +298,21 @@ void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth)
 	double d;
 	if (ray_aabb(ray, node->bounds.min, node->bounds.max, 1e30, &d))
 	{
-		BYTE color[4] = { max(255 - depth,0), 20, min(depth,255) ,240 };
+		BYTE color[4] = { max(255 - depth*10,0), 20, min(depth*10,255) ,240 };
 		overlayColor(color, RGBAout);
 	}
 
-	ray_bvh(RGBAout, node->left_ptr, ray, depth + 10);
+	ray_bvh(RGBAout, node->left_ptr, ray, depth + 1);
 
-	ray_bvh(RGBAout, node->right_ptr, ray, depth + 10);
+	ray_bvh(RGBAout, node->right_ptr, ray, depth + 1);
 }
 
 
 typedef struct {
 	Body* bodies;
 	BVHNode* BVHroot;
-	int* textureIDs;
-	Texture* textures;
+	short* matIDs;
+	Material* mats;
 	Vector3 camera_pos;
 	Quaternion camera_angle;
 	int count;
@@ -226,7 +347,7 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 
 		BYTE RGBA[4] = { 0 };
 
-		raytrace(RGBA,args->BVHroot, args->bodies, args->textureIDs, args->textures, args->count, ray);
+		raytrace(RGBA,args->BVHroot, args->bodies, args->matIDs, args->mats, args->count, ray, 0);
 
 		for (int j = 0; j < outputFrame.texture.byteCount; j++)
 		{
@@ -239,7 +360,7 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 }
 
 
-int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
+int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
 {
 	rendertimeClock = clock();
 
@@ -267,8 +388,8 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 
 		args->bodies = bodies;
 		args->BVHroot = BVHroot;
-		args->textureIDs = textureIDs;
-		args->textures = textures;
+		args->matIDs = matIDs;
+		args->mats = mats;
 		args->camera_pos = cameraPos;
 		args->camera_angle = cameraAngle;
 		args->count = count;
@@ -303,7 +424,7 @@ int renderer_raytrace(Body* bodies, int* textureIDs, Texture* textures, int coun
 	return 1;
 }
 
-int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
+int renderer_raytrace_b(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
 {
 	rendertimeClock = clock();
 
@@ -343,7 +464,7 @@ int renderer_raytrace_b(Body* bodies, int* textureIDs, Texture* textures, int co
 
 		BYTE RGBA[4] = { 0 };
 
-		raytrace(RGBA, BVHroot, bodies, textureIDs, textures, count, ray);
+		raytrace(RGBA, BVHroot, bodies, matIDs, mats, count, ray, 0);
 
 		for (int j = 0; j < outputFrame.texture.byteCount; j++)
 		{
@@ -473,7 +594,6 @@ void printfFrameTimes(double targetms)
 
 void end()
 {
-	//end program (cleanup)
 	free(outputFrame.texture.pixeldata);
 	outputFrame.texture.pixeldata = NULL;
 

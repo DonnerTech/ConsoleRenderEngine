@@ -43,7 +43,7 @@ Vector3 vector3_cross(Vector3 a, Vector3 b);
 
 double vector3_angle(Vector3 a, Vector3 b);
 
-Vector3 vector3_reflect(Vector3 ray, Vector3 normal);
+Vector3 vector3_reflect(Vector3 ray_dir, Vector3 normal);
 
 Vector3 vector3_random(void);
 
