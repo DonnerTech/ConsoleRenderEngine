@@ -115,5 +115,8 @@
     <Image Include="textures\kenney_prototype-textures\PNG\Dark\texture_05.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="textures\kenney_prototype-textures\PNG\Light\texture_06.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

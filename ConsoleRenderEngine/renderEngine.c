@@ -210,6 +210,28 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 				*/
 
 				Vector3 n = (Vector3){ fabs(state.normal.x), fabs(state.normal.y), fabs(state.normal.z) };
+				Vector2 xProj = (Vector2){ state.position.y, state.position.z };
+				Vector2 yProj = (Vector2){ state.position.x, state.position.z };
+				Vector2 zProj = (Vector2){ state.position.x, state.position.y };
+
+				BYTE cx[4], cy[4], cz[4];
+				texture_sample(currentMat.baseTexture, xProj, cx);
+				texture_sample(currentMat.baseTexture, yProj, cy);
+				texture_sample(currentMat.baseTexture, zProj, cz);
+
+				// average them into one
+				float sum = n.x + n.y + n.z;
+				if (sum == 0.0f) sum = 1.0f;
+
+				for (int i = 0; i < 4; i++) 
+				{
+					RGBAout[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
+				}
+				break;
+			}
+			case(PROJECT_LOCAL_TRIPLANER):
+			{
+				Vector3 n = (Vector3){ fabs(state.normal.x), fabs(state.normal.y), fabs(state.normal.z) };
 				Vector2 xProj = (Vector2){ -state.localPosition.y, -state.localPosition.z };
 				Vector2 yProj = (Vector2){ state.localPosition.x, -state.localPosition.z };
 				Vector2 zProj = (Vector2){ state.localPosition.x, -state.localPosition.y };
@@ -223,7 +245,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 				float sum = n.x + n.y + n.z;
 				if (sum == 0.0f) sum = 1.0f;
 
-				for (int i = 0; i < 4; i++) 
+				for (int i = 0; i < 4; i++)
 				{
 					RGBAout[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
 				}
@@ -247,6 +269,24 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 
 				break;
 			}
+			case(PROJECT_LOCAL_SPHERICAL):
+			{
+				/* glsl sudocode:
+				vec3 p = normalize(position);
+				float u = atan(p.z, p.x) / (2.0 * PI) + 0.5;
+				float v = asin(p.y) / PI + 0.5;
+				vec2 uv = vec2(u, v);
+				vec4 color = texture(tex, uv * scale);
+				*/
+				Vector3 p_norm = vector3_normalize(state.localPosition);
+				Vector2 uv = (Vector2){
+					atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
+					asinf(p_norm.y) / PI + 0.5f
+				};
+				texture_sample(currentMat.baseTexture, uv, RGBAout);
+
+				break;
+			}
 		}
 	}
 
@@ -256,10 +296,10 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 
 		Vector3 ref_dir = vector3_reflect(ray.direction, state.normal);
 		Ray rayR;
-		create_ray(&rayR, state.position, ref_dir);
 
-		//const double EPS = 1e30;
-		//create_ray(&rayR, vector3_add(state.position, vector3_scale(state.normal, EPS)), ref_dir);
+		double EPS = 1e-8;
+		Vector3 pos = vector3_add(state.position, vector3_scale(state.normal, EPS));
+		create_ray(&rayR, pos, ref_dir);
 
 		BYTE ref_color[4];
 
@@ -284,7 +324,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 		RGBAout[3] = 255;
 	}
 
-#if _DEBUG
+#if _DEBUG || _BENCHMARK
 	// render Bounding Volume Hierarchy
 	ray_bvh(RGBAout, BVHroot, ray, 0);
 #endif

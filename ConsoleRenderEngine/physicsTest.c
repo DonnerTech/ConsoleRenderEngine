@@ -14,7 +14,7 @@ void randomizePositions(Body* bodies, int count, double distance);
 void physics_test(void)
 {
 	// INITIALIZE MATERIALS AND TEXTURES
-	const int mat_count = 3;
+	const int mat_count = 4;
 
 	Material* mat_list = (Material*)malloc(sizeof(Material) * mat_count);
 
@@ -24,24 +24,26 @@ void physics_test(void)
 		return;
 	}
 
-	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 0, 0, 0, 255 }, 1);
-
-	const short gb_Filepath[59] = L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png";
-	if (mat_list[0].baseTexture == NULL || !texLoader_LoadTexture(mat_list[0].baseTexture, gb_Filepath))
-	{
-		printf("Texture Load Fail");
-		return;
-	}
+	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 64, 64, 64, 255 }, 1);
+	const short texture_path_0[60] = L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png";
+	if (mat_list[0].baseTexture == NULL || !texLoader_LoadTexture(mat_list[0].baseTexture, texture_path_0))
+	{printf("Texture Load Fail"); return;}
 	mat_list[0].baseTexture->uvScale = 0.0125f;
 
 
-	create_material(&mat_list[1], PROJECT_TRIPLANER, (BYTE[4]) { 100, 100, 100, 255 }, 1);
+	create_material(&mat_list[1], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 100, 100, 100, 255 }, 1);
 	texLoader_generateTexture(mat_list[1].baseTexture, 4, 2, 2);
 	texLoader_fillTexture(mat_list[1].baseTexture, (BYTE[4]) { 200, 150, 10, 255 });
 
-	create_material(&mat_list[2], PROJECT_TRIPLANER, (BYTE[4]) { 20, 20, 20, 255 }, 1);
+	create_material(&mat_list[2], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 20, 20, 20, 255 }, 1);
 	texLoader_generateTexture(mat_list[2].baseTexture, 4, 2, 2);
 	texLoader_fillTexture(mat_list[2].baseTexture, (BYTE[4]) { 20, 150, 250, 255 });
+
+	create_material(&mat_list[3], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 0, 0, 0, 0 }, 0);
+	const short texture_path_1[60] = L"textures\\kenney_prototype-textures\\PNG\\Light\\texture_06.png";
+	if (mat_list[3].baseTexture == NULL || !texLoader_LoadTexture(mat_list[3].baseTexture, texture_path_1))
+	{printf("Texture Load Fail"); return;}
+	mat_list[3].baseTexture->uvScale = 0.25f;
 
 	short* matIDs = calloc(BODY_COUNT+1, sizeof(short));
 
@@ -61,7 +63,7 @@ void physics_test(void)
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
 		// creates a sphere
-		matIDs[world.body_count] = i % 2 + 1; // alternate between 1 and 2
+		matIDs[world.body_count] = i % 3 + 1; // alternate between texture ids 1 through 3
 
 		double size = 0.5 + (double)(rand() % 1000) / 500;
 		Vector3 position = vector3_add((Vector3) { 0.0, -2.5 - size * i, 2.0 }, vector3_scale(vector3_random(), 2));

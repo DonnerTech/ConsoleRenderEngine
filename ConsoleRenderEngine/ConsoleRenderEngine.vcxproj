@@ -229,6 +229,7 @@
     <Image Include="textures\kenney_prototype-textures\PNG\Dark\texture_05.png">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </Image>
+    <Image Include="textures\kenney_prototype-textures\PNG\Light\texture_06.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -3,7 +3,7 @@
 void create_material(Material* mat, Projection proj, BYTE specularColor[4], float reflectivity)
 {
 	mat->projecton = proj;
-	mat->reflectivity = 1;
+	mat->reflectivity = reflectivity;
 	mat->specularColor[0] = specularColor[0];//4
 	mat->specularColor[1] = specularColor[1];//g
 	mat->specularColor[2] = specularColor[2];//b

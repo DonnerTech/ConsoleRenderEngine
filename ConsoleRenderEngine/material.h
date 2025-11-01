@@ -8,7 +8,9 @@
 typedef enum Projection {
 	PROJECT_PLANER,
 	PROJECT_TRIPLANER,
-	PROJECT_SPHERICAL
+	PROJECT_LOCAL_TRIPLANER,
+	PROJECT_SPHERICAL,
+	PROJECT_LOCAL_SPHERICAL
 } Projection;
 
 typedef struct Material {
