@@ -1,34 +1,49 @@
 #pragma once
-#ifndef RENDER_ENGINE
-#define RENDER_ENGINE
+#ifndef RENDER_ENGINE_H
+#define RENDER_ENGINE_H
 
-#include <stdbool.h> // booleans
 #include <stdio.h> // I/O
 #include <stdlib.h> // memory allocation
 #include <math.h>
 #include <time.h>
+#include <windows.h> // Multithreading
 
 #include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
 
-#include "vector2.h"
-#include "vector3.h"
+#include "quaternion.h"
+#include "body.h"
+#include "ray.h"
+#include "textureLoader.h"
+#include "bvh.h"
+#include "material.h"
 
-void polarToEuler(double r, double theta, double* x, double* y);
+#include "fastTrig.h"
 
-void rotatingTriangleDemo(int tick);
+typedef struct {
+	COORD position;
+	Texture texture;
 
-void drawTriangleToArray(double x1, double y1, double x2, double y2, double x3, double y3, char c);
+} Frame;
 
-void fsRayTrace(Vector3* spheres, double* size, int count, double fov, double maxDepth);
+double deltaTime;
 
-void renderer_unit_tests();
+static void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth);
 
-int init();
+int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
-void blank();
+int renderer_raytrace_b(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
-void render(double targetms, int tick);
+int init(int w, int h);
 
+int userInit();
+
+void resetDeltaTime(void);
+
+void renderFrame(void);
+
+void printfFrameTimes(double targetms);
+
+//end program (cleanup)
 void end();
 
 #endif /* RENDER_ENGINE */

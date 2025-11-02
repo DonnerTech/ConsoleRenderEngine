@@ -1,110 +1,70 @@
-#pragma warning(disable : 4996).
+#define _CRT_SECURE_NO_WARNINGS
 
-#include <stdbool.h> // booleans
-#include <stdio.h> // I/O
-#include <stdlib.h> // memory allocation
-#include <math.h>
-#include <time.h>
+#include "physicsTest.h"
 
-#include <conio.h>   // for _kbhit() and _getch() to pull user input without waiting
+#if _BENCHMARK || _DEBUG
+#include "renderEngine_performanceTests.h"
 
-#include "renderEngine.h"
-
-
-//int* entityIDs;
-
-const int COUNT = 6;
-Vector3 spherePositions[6];
-double sphereSizes[6] = { 1.2, 0.8, 0.8, 0.2, 0.2, 0.15};
-
-void draw(int tick)
-{
-	double speed = 50.0;
-
-	Vector2 vecA;
-	Vector2 vecB;
-	Vector2 vecC;
-	Vector2 vecD;
-	Vector2 pos;
-	pos.x = (sin(tick / 200.0) + 1) / 8.0;
-	pos.y = 0.0;
-	double width = 3.141/4.0, length = 0.25 * pos.x;
-
-	polarToEuler(pos.x, pos.y + (tick / speed), &vecA.x, &vecA.y);
-	polarToEuler(pos.x + length, pos.y + (tick / speed) + width, &vecB.x, &vecB.y);
-
-	polarToEuler(pos.x + length, pos.y + (tick / speed), &vecC.x, &vecC.y);
-	polarToEuler(pos.x, pos.y + (tick / speed) + width, &vecD.x, &vecD.y);
-
-	//char character = 32 + (int)((double)rand() / RAND_MAX * 32);
-	char character = 'X';
-
-	drawTriangleToArray(vecA.x, vecA.y,
-		vecB.x, vecB.y,
-		vecC.x, vecC.y, character);
-
-	drawTriangleToArray(vecA.x, vecA.y,
-		vecD.x, vecD.y,
-		vecB.x, vecB.y, character);
-}
+#endif
 
 int main(void)
 {
-	//renderer_unit_tests();
+	srand((unsigned int)time(NULL));
+	init_trig_tables();
 
-	spherePositions[0].x = 0;
-	spherePositions[0].y = 0;
-	spherePositions[0].z = 4;
+	printf("Welcome to CoralEngine. The Console based game engine.\n\n");
 
-	spherePositions[1].x = 6;
-	spherePositions[1].y = 0;
-	spherePositions[1].z = 5;
+#if _DEBUG
+	printf("\033[38;2;255;55;0m");
+	printf("WARNING! YOU ARE RUNNING IN DEBUG MODE!\nRUN IN RELEASE MODE FOR COMPILER OPTIMIZATIONS!\n\n");
+	printf("\033[0m");
+#endif // _DEBUG
 
-	spherePositions[2].x = -2.5;
-	spherePositions[2].y = -1.5;
-	spherePositions[2].z = 2;
+#if _BENCHMARK || _DEBUG
 
-	spherePositions[3].x = -0.5;
-	spherePositions[3].y = -0.1;
-	spherePositions[3].z = 4;
+	printf("\033[38;2;55;255;0m");
+	printf("===BENCHMARKING ENABLED===\n\n");
+	printf("\033[0m");
 
-	spherePositions[4].x = 0.45;
-	spherePositions[4].y = 0.6;
-	spherePositions[4].z = 0.8;
+	testRaySphere(1000000);
 
-	spherePositions[5].x = 0.05;
-	spherePositions[5].y = 0.55;
-	spherePositions[5].z = 0.8;
+	testRayBox(1000000);
 
-	int code = init();
-	if (code != 0)
+	testRayPlane(1000000);
+
+	test_trig_tables();
+
+	testBVHtree(10, 25, 1);
+
+	
+	for (int i = 0; i < 5; i++)
 	{
-		return code;
+
+		testBVHtree(100, 10, 0);
+
+		//testBVHtree(1000, 10, 0);
+
+		testBVHtree(10000, pow(10, i),0);
+
+		//testBVHtree(100000, pow(10, i),0);
+
+		// selection sort took: 51 seconds
+		// merge sort took: 0.655 seconds
+		// quick sort took: 0.045 seconds
+		//testBVHtree(1000000, pow(10, i),0);
 	}
 
-	bool isRunning = true;
-	int tick = 0;
-	// render loop
-	while (isRunning)
-	{
-		blank(); // clear screen
+	printf("\033[38;2;55;255;0m");
+	printf("===BENCHMARKS COMPLETE====\n\n");
+	printf("\033[0m");
 
-		//update things
-		//draw(tick);
+#endif // _BENCHMARK
 
-		spherePositions[0].x = sin(tick / 5.0) * 2;
-		spherePositions[0].z = 4 + cos(tick / 5.0) * 2;
+	system("pause");
 
-		fsRayTrace(spherePositions, sphereSizes, COUNT, 60, 20);
+	physics_test();
 
-		render(100,tick); //16 = 60fps, 32 = 30fps
-
-		tick++;
-		// check if a key was pressed to exit the loop (not waiting)
-		if (_kbhit())
-			isRunning = false;
-	}
-	end();
+	//bvh_test();
 
 	return 0;
 }
