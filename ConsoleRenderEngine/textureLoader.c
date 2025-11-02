@@ -1,7 +1,7 @@
 
 #include "textureLoader.h"
 
-
+#if _WIN32
 
 int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName) 
 {
@@ -110,6 +110,32 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
 
     return 1;
 }
+
+#else
+
+int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName)
+{
+    // Allocate texture data for RGBA pixels
+    //texture = (Texture*)malloc(sizeof(Texture));
+
+    if (texture == NULL)
+        return 0;
+
+    //texture->texMode = TEXMODE_REPEATING;
+    //texture->uvScale = 1;
+    //texture->width = width;
+    //texture->height = height;
+    //texture->byteCount = 4;
+    //texture->stride = width * texture->byteCount; // 4 bytes per pixel
+    //texture->imageSize = texture->stride * height;
+    //texture->pixeldata = (BYTE*)malloc(texture->imageSize);
+
+    printf("Texture Loading Not Implemented for this OS!\n");
+
+    return 0; // TODO: Implement cross platform texture loading
+}
+
+#endif // _WIN32
 
 void texLoader_generateTexture(Texture* texture, int byteCount, int width, int height)
 {

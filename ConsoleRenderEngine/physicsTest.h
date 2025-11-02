@@ -2,6 +2,9 @@
 #ifndef PHYSICSTEST_H
 #define PHYSICSTEST_H
 
+
+#include "getasynckeystate.h"
+
 #include "textureLoader.h"
 #include "physicsEngine.h"
 #include "renderEngine.h"

@@ -1,5 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
+#define GETASYNCKEYSTATE_IMPLEMENTATION
+
 #include "physicsTest.h"
 
 #if _BENCHMARK || _DEBUG
@@ -11,6 +13,11 @@ int main(void)
 {
 	srand((unsigned int)time(NULL));
 	init_trig_tables();
+
+	if (!GAS_Init()) {
+		printf("GAS_Init failed (no backend)\n");
+		return 1;
+	}
 
 	printf("Welcome to CoralEngine. The Console based game engine.\n\n");
 
@@ -65,6 +72,8 @@ int main(void)
 	physics_test();
 
 	//bvh_test();
+
+	GAS_Shutdown();
 
 	return 0;
 }

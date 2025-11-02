@@ -2,6 +2,10 @@
 #ifndef TEXTURE_LOADER_H
 #define TEXTURE_LOADER_H
 
+#ifndef _WIN32
+#include "stb_image.h"
+#endif // !_WIN32
+
 #include "texture.h"
 
 // Loads an image to a texture struct

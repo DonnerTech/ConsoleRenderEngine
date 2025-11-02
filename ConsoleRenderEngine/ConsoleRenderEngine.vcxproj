@@ -178,6 +178,8 @@
       <CallingConvention>
       </CallingConvention>
       <UseFullPaths>true</UseFullPaths>
+      <AdditionalOptions>
+      </AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -226,6 +228,7 @@
   <ItemGroup>
     <ClInclude Include="bvh.h" />
     <ClInclude Include="fastTrig.h" />
+    <ClInclude Include="getasynckeystate.h" />
     <ClInclude Include="material.h" />
     <ClInclude Include="matrix3x3.h" />
     <ClInclude Include="physicsEngine.h" />

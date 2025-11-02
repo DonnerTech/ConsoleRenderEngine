@@ -26,6 +26,11 @@
 
 #ifndef _WIN32
 typedef unsigned char BYTE;
+typedef struct COORD
+{
+	short X;
+	short Y;
+} COORD;
 #endif // !_WIN32
 
 

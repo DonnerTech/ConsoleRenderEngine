@@ -2,16 +2,22 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
+#if _WIN32
 #include <wincodec.h>
-#include <Windows.h>
+#include <windows.h>
+#pragma comment(lib, "windowscodecs.lib")
+#else
+typedef unsigned char BYTE;
+typedef unsigned int UINT;
+#endif // _WIN32
+
 #include <stdio.h>
 #include "vector2.h"
-
-#pragma comment(lib, "windowscodecs.lib")
 
 #define TEXMODE_CLAMPED 0
 #define TEXMODE_REPEATING 1
 #define RGBA_WHITE {255,255,255,255}
+
 
 typedef struct {
 
