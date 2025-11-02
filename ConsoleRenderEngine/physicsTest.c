@@ -24,18 +24,18 @@ void physics_test(void)
 		return;
 	}
 
-	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 64, 64, 64, 255 }, 1);
+	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 64, 64, 64, 255 }, 0);
 	const short texture_path_0[60] = L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png";
 	if (mat_list[0].baseTexture == NULL || !texLoader_LoadTexture(mat_list[0].baseTexture, texture_path_0))
 	{printf("Texture Load Fail"); return;}
 	mat_list[0].baseTexture->uvScale = 0.0125f;
 
 
-	create_material(&mat_list[1], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 100, 100, 100, 255 }, 1);
+	create_material(&mat_list[1], PROJECT_PLANER, (BYTE[4]) { 100, 100, 100, 255 }, 1);
 	texLoader_generateTexture(mat_list[1].baseTexture, 4, 2, 2);
 	texLoader_fillTexture(mat_list[1].baseTexture, (BYTE[4]) { 200, 150, 10, 255 });
 
-	create_material(&mat_list[2], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 20, 20, 20, 255 }, 1);
+	create_material(&mat_list[2], PROJECT_PLANER, (BYTE[4]) { 20, 20, 20, 255 }, 1);
 	texLoader_generateTexture(mat_list[2].baseTexture, 4, 2, 2);
 	texLoader_fillTexture(mat_list[2].baseTexture, (BYTE[4]) { 20, 150, 250, 255 });
 
@@ -67,7 +67,6 @@ void physics_test(void)
 
 		double size = 0.5 + (double)(rand() % 1000) / 500;
 		Vector3 position = vector3_add((Vector3) { 0.0, -2.5 - size * i, 2.0 }, vector3_scale(vector3_random(), 2));
-
 		RigidBody sphere = rb_create_sphere(position, size, 1.0);
 		sphere.restitution = 1;
 		sphere.friction = 1;
@@ -76,7 +75,6 @@ void physics_test(void)
 		//creates a box
 		//Vector3 half_extents = (Vector3){0.5, 0.5, 0.5};
 		//Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * (i*2 + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
-
 		//Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
 		//orientation = quat_normalize(orientation);
 		//RigidBody box = rb_create_box(position, half_extents, orientation, 1.0);

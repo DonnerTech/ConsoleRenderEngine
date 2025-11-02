@@ -3,7 +3,7 @@
 #include "renderEngine.h"
 
 #define NUM_THREADS 32
-#define MAX_RT_DEPTH 2
+#define MAX_RT_DEPTH 1
 
 //int width, height;
 //char* outputFrame;
@@ -19,7 +19,7 @@ static clock_t executiontimeClock;
 HANDLE co_handle;
 
 //create the new frame in a buffer and push it to the console in one call.
-void winPrintFrame()
+void winPrintFrame(void)
 {
 	clock_t printStart = clock();
 
@@ -271,13 +271,6 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 			}
 			case(PROJECT_LOCAL_SPHERICAL):
 			{
-				/* glsl sudocode:
-				vec3 p = normalize(position);
-				float u = atan(p.z, p.x) / (2.0 * PI) + 0.5;
-				float v = asin(p.y) / PI + 0.5;
-				vec2 uv = vec2(u, v);
-				vec4 color = texture(tex, uv * scale);
-				*/
 				Vector3 p_norm = vector3_normalize(state.localPosition);
 				Vector2 uv = (Vector2){
 					atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
@@ -347,59 +340,6 @@ static void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth)
 	ray_bvh(RGBAout, node->right_ptr, ray, depth + 1);
 }
 
-
-typedef struct {
-	Body* bodies;
-	BVHNode* BVHroot;
-	short* matIDs;
-	Material* mats;
-	Vector3 camera_pos;
-	Quaternion camera_angle;
-	int count;
-	int id;
-	double fov;
-} RaytraceGroupArgs;
-
-DWORD WINAPI raytraceWorker(LPVOID arg)
-{
-	RaytraceGroupArgs* args = (RaytraceGroupArgs*)arg;
-
-	int width = outputFrame.texture.width;
-	int height = outputFrame.texture.height;
-	int pixelCount = width * height;
-
-	int start = (pixelCount / NUM_THREADS) * args->id;
-	int end = (args->id == NUM_THREADS - 1) ? pixelCount : start + (pixelCount / NUM_THREADS);
-
-	for (int i = start; i < end; i++)
-	{
-		Vector3 rayDir;
-		rayDir.x = (((i % width) - (width / 2.0)) / width * 2) * args->fov / 90 * ((double)width / height);
-		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * args->fov / 90 * ((double)height / width);
-		rayDir.z = 1;
-
-		Ray ray;
-		rayDir = vector3_normalize(rayDir);
-
-		rayDir = quat_rotate_vector(args->camera_angle, rayDir);
-
-		create_ray(&ray, args->camera_pos, rayDir);
-
-		BYTE RGBA[4] = { 0 };
-
-		raytrace(RGBA,args->BVHroot, args->bodies, args->matIDs, args->mats, args->count, ray, 0);
-
-		for (int j = 0; j < outputFrame.texture.byteCount; j++)
-		{
-			outputFrame.texture.pixeldata[i * outputFrame.texture.byteCount + j] = RGBA[j];
-		}
-	}
-
-	free(args); // free allocated memory after use
-	return 0;
-}
-
-
 int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
 {
 	rendertimeClock = clock();
@@ -407,70 +347,6 @@ int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Ve
 	//create bvh tree
 	BVHNode* BVHroot = BVH_createTree(bodies, count);
 
-	if (!BVH_validateTree(BVHroot)) return 0;
-
-	//BVH_DebugPrint(BVHroot);
-	//system("pause");
-
-	if (BVHroot == NULL)
-	{
-		fprintf(stderr, "Error creating BVH Tree\n");
-		system("pause");
-		return 0;
-	}
-
-	HANDLE threads[NUM_THREADS];
-
-	// Launch threads
-	for (int i = 0; i < NUM_THREADS; i++) {
-		RaytraceGroupArgs* args = malloc(sizeof(RaytraceGroupArgs));
-		if (!args) return 0;
-
-		args->bodies = bodies;
-		args->BVHroot = BVHroot;
-		args->matIDs = matIDs;
-		args->mats = mats;
-		args->camera_pos = cameraPos;
-		args->camera_angle = cameraAngle;
-		args->count = count;
-		args->fov = fov;
-
-		args->id = i;
-
-		threads[i] = CreateThread(
-			NULL,       // default security
-			0,          // default stack size
-			raytraceWorker,     // thread function
-			args,        // argument
-			0,          // run immediately
-			NULL        // thread id not needed
-		);
-
-		if (threads[i] == NULL) {
-			fprintf(stderr, "Error creating thread %d\n", i);
-			system("pause");
-			return 0;
-		}
-	}
-
-	// Wait for threads
-	WaitForMultipleObjects(NUM_THREADS, threads, TRUE, INFINITE);
-
-	// Clean up handles
-	for (int i = 0; i < NUM_THREADS; i++) CloseHandle(threads[i]);
-
-	BVH_freeTree(BVHroot);
-
-	return 1;
-}
-
-int renderer_raytrace_b(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
-{
-	rendertimeClock = clock();
-
-	//create bvh tree
-	BVHNode* BVHroot = BVH_createTree(bodies, count);
-
 	//BVH_DebugPrint(BVHroot);
 	//system("pause");
 
@@ -485,30 +361,34 @@ int renderer_raytrace_b(Body* bodies, short* matIDs, Material* mats, int count, 
 	int height = outputFrame.texture.height;
 	int pixelCount = width * height;
 
-	int start = 0;
-	int end = pixelCount;
-
-	for (int i = start; i < end; i++)
+	//OpenMP multithreading with cross platform support
+	#pragma omp parallel
 	{
-		Vector3 rayDir;
-		rayDir.x = (((i % width) - (width / 2.0)) / width * 2) * fov / 90 * ((double)width / height);
-		rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * fov / 90 * ((double)height / width); 
-		rayDir.z = 1;
+		int start = (pixelCount / NUM_THREADS) * omp_get_thread_num();
+		int end = (omp_get_thread_num() == NUM_THREADS - 1) ? pixelCount : start + (pixelCount / NUM_THREADS);
 
-		Ray ray;
-		rayDir = vector3_normalize(rayDir);
-
-		rayDir = quat_rotate_vector(cameraAngle, rayDir);
-
-		create_ray(&ray, cameraPos, rayDir);
-
-		BYTE RGBA[4] = { 0 };
-
-		raytrace(RGBA, BVHroot, bodies, matIDs, mats, count, ray, 0);
-
-		for (int j = 0; j < outputFrame.texture.byteCount; j++)
+		for (int i = start; i < end; i++)
 		{
-			outputFrame.texture.pixeldata[i * outputFrame.texture.byteCount + j] = RGBA[j];
+			Vector3 rayDir;
+			rayDir.x = (((i % width) - (width / 2.0)) / width * 2) * fov / 90 * ((double)width / height);
+			rayDir.y = (((i / (double)height) - (height / 2.0)) / height * 2) * fov / 90 * ((double)height / width);
+			rayDir.z = 1;
+
+			Ray ray;
+			rayDir = vector3_normalize(rayDir);
+
+			rayDir = quat_rotate_vector(cameraAngle, rayDir);
+
+			create_ray(&ray, cameraPos, rayDir);
+
+			BYTE RGBA[4] = { 0 };
+
+			raytrace(RGBA, BVHroot, bodies, matIDs, mats, count, ray, 0);
+
+			for (int j = 0; j < outputFrame.texture.byteCount; j++)
+			{
+				outputFrame.texture.pixeldata[i * outputFrame.texture.byteCount + j] = RGBA[j];
+			}
 		}
 	}
 
@@ -519,6 +399,8 @@ int renderer_raytrace_b(Body* bodies, short* matIDs, Material* mats, int count, 
 
 int init(int w, int h)
 {
+	omp_set_num_threads(NUM_THREADS);
+
 	outputFrame.position = (COORD){ 0, 0 };
 	texLoader_generateTexture(&outputFrame.texture, 3, w, h);
 
@@ -533,11 +415,13 @@ int init(int w, int h)
 		characterBuffer[i] = '\0';
 	}
 
+#if _WIN32
 	// get the console handle for clean screen blitting
 	co_handle = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	if (co_handle == INVALID_HANDLE_VALUE)
 		return 1;
+#endif // _WIN32
 
 	return 0;
 }
