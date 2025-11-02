@@ -235,6 +235,7 @@
     <ClInclude Include="renderEngine.h" />
     <ClInclude Include="body.h" />
     <ClInclude Include="renderEngine_performanceTests.h" />
+    <ClInclude Include="stb_image.h" />
     <ClInclude Include="texture.h" />
     <ClInclude Include="textureLoader.h" />
     <ClInclude Include="vector2.h" />
