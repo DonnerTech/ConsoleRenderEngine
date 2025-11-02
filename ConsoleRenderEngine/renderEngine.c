@@ -16,7 +16,10 @@ static size_t bufferSize;
 static clock_t rendertimeClock;
 static clock_t executiontimeClock;
 
+#if _WIN32
 HANDLE co_handle;
+#endif // _WIN32
+
 
 //create the new frame in a buffer and push it to the console in one call.
 void winPrintFrame(void)
@@ -66,11 +69,20 @@ void winPrintFrame(void)
 	*ptr = '\0';
 
 	// blit the buffer
-
+#if _WIN32
 	DWORD written;
 
 	SetConsoleCursorPosition(co_handle, outputFrame.position);
 	WriteConsoleA(co_handle, characterBuffer, total, &written, NULL);
+
+#else
+
+	printf("\033[3J\033[H");
+	printf("%s\n", characterBuffer);
+
+#endif // _WIN32
+
+
 
 	printf("blitting time: %d ms\n", clock() - printStart);
 }
