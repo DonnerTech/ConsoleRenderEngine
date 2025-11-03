@@ -297,7 +297,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 	int isDirectlyLit = 0;
 
 	// ---direct lighting---
-	if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH)
+	if (state.hit_id != NO_HIT)
 	{
 
 		Vector3 ref_dir = (Vector3){ 0.4, -0.8, 0.4472135 };// sun direction (normalized)
@@ -353,9 +353,9 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 	
 
 	// ---Global Illumination---
-	/*if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH)
+	if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH)
 	{
-		const int sampleCount = 32;
+		const int sampleCount = 64;
 		for (int i = 0; i < sampleCount; i++)
 		{
 			Vector3 ray_dir = vector3_normalize(vector3_random()); // cubic distribution (needs correction)
@@ -380,7 +380,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 
 			addativeColor(ref_color, albedo);
 		}
-	}*/
+	}
 
 	// ---ambient sky light---
 	if (state.hit_id == NO_HIT)
