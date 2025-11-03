@@ -24,7 +24,7 @@ void physics_test(void)
 		return;
 	}
 
-	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 64, 64, 64, 255 }, 1);
+	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 64, 64, 64, 255 }, 0);
 	const short texture_path_0[60] = L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png";
 	if (mat_list[0].baseTexture == NULL || !texLoader_LoadTexture(mat_list[0].baseTexture, texture_path_0))
 	{printf("Texture Load Fail"); return;}

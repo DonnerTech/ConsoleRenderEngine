@@ -51,29 +51,32 @@ int ray_aabb(Ray ray, Vector3 min, Vector3 max, double tmax_limit, double *dist_
 	return 1;
 }
 
+// solving the quadratic equation for 
+// the general ray-sphere equation
 int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr, Vector3* localHitPoint, Vector3* normal)
 {
-	double direct_dist = vector3_magnitude(vector3_subtract(sphere.position, ray.origin));
-	double angle = vector3_angle(vector3_subtract(sphere.position, ray.origin), ray.direction);
+	// setup
+	Vector3 oc = vector3_subtract(ray.origin, sphere.position);
+	double b = 2.0 * vector3_dot(oc, ray.direction);
+	double c = vector3_dot(oc, oc) - sphere.sphere.radius * sphere.sphere.radius;
+	double disc = b * b - 4.0 * c;
+	if (disc < 0.0) return 0;
 
-	// if the distance to the point perpendicular to the sphere is less than the radius and it is in front of the camera
-	// trig stuff :>
+	// quadratic solving
+	double sqrtDisc = sqrt(disc);
+	double t = (-b - sqrtDisc) * 0.5;
+	if (t < 1e-8) t = (-b + sqrtDisc) * 0.5;
+	if (t < 1e-8) return 0;
 
-	*dist_ptr = direct_dist - fast_cos(angle) * sphere.sphere.radius;
-
-	double a = fast_sin(angle) * direct_dist;
-	if (a <= sphere.sphere.radius && fast_cos(angle) >= 0)
-	{
-		Vector3 hitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, *dist_ptr));
-
-		*localHitPoint = vector3_subtract(hitPoint, sphere.position);
-		*normal = vector3_normalize(*localHitPoint);
-		*localHitPoint = quat_rotate_vector(sphere.orientation, *localHitPoint);
-
-		return 1;
-	}
-	return 0;
+	// return data
+	*dist_ptr = t;
+	Vector3 hitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, t));
+	*localHitPoint = vector3_subtract(hitPoint, sphere.position);
+	*normal = vector3_normalize(*localHitPoint);
+	*localHitPoint = quat_rotate_vector(sphere.orientation, *localHitPoint);
+	return 1;
 }
+
 
 int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint, Vector3* normal)
 {
@@ -100,40 +103,29 @@ int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoi
 	bounds[0] = vector3_subtract(zero, box.box.half_extents); // min
 	bounds[1] = vector3_add(zero, box.box.half_extents); // max
 
-	double tmin, tmax, tymin, tymax, tzmin, tzmax;
+	double txmin = (bounds[ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
+	double txmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
+	double tymin = (bounds[ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
+	double tymax = (bounds[1 - ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
+	double tzmin = (bounds[ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
+	double tzmax = (bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
 
-	tmin = (bounds[ba_ray.sign[0]].x - ba_ray.origin.x) * ba_ray.invdir.x;
-	tmax = (bounds[1 - ba_ray.sign[0]].x - ba_ray.origin.x) * ba_ray.invdir.x;
-	tymin = (bounds[ba_ray.sign[1]].y - ba_ray.origin.y) * ba_ray.invdir.y;
-	tymax = (bounds[1 - ba_ray.sign[1]].y - ba_ray.origin.y) * ba_ray.invdir.y;
+	// Combine the slabs
+	double tmin = fmax(fmax(txmin, tymin), tzmin);
+	double tmax = fmin(fmin(txmax, tymax), tzmax);
 
-	if ((tmin > tymax) || (tymin > tmax))
+	// No hit if range is invalid or intersection is behind the ray
+	if (tmax < 0 || tmin > tmax)
 		return 0;
 
-	if (tymin > tmin)
-		tmin = tymin;
-	if (tymax < tmax)
-		tmax = tymax;
+	// If the ray starts inside the box
+	if (tmin < 0 && tmax > 0) {
+		*dist_ptr = 0.0;
+		return 1;
+	}
 
-	tzmin = (bounds[ba_ray.sign[2]].z - ba_ray.origin.z) * ba_ray.invdir.z;
-	tzmax = (bounds[1 - ba_ray.sign[2]].z - ba_ray.origin.z) * ba_ray.invdir.z;
-
-	if ((tmin > tzmax) || (tzmin > tmax))
-		return 0;
-
-	if (tzmin > tmin)
-		tmin = tzmin;
-	if (tzmax < tmax)
-		tmax = tzmax;
-
-	// Compute intersection distance
-	if (tmax < 0)
-		return 0; // box is behind ray
-
-	if (tmin < 0)
-		*dist_ptr = tmax; // inside box
-	else
-		*dist_ptr = tmin; // first hit
+	// Return the nearest valid distance
+	*dist_ptr = tmin;
 
 	*localHitPoint = vector3_add(ba_ray.origin, vector3_scale(ba_ray.direction, *dist_ptr));
 	

@@ -139,6 +139,10 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 	RGBAout[2] = 0;
 	RGBAout[3] = 255;
 
+	BYTE albedo[4] = { 255,255,255,255 };
+
+	BYTE skyCol[4] = {	200, 200, 230, 255 };
+
 	raysShot++;
 
 	const double depthScalar = 4e-1;
@@ -193,7 +197,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 		{
 			case(PROJECT_PLANER):
 			{
-				texture_sample(currentMat.baseTexture, (Vector2) { state.localPosition.x, -state.localPosition.z }, RGBAout);
+				texture_sample(currentMat.baseTexture, (Vector2) { state.localPosition.x, -state.localPosition.z }, albedo);
 				break;
 			}
 			case(PROJECT_TRIPLANER):
@@ -225,7 +229,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 
 				for (int i = 0; i < 4; i++) 
 				{
-					RGBAout[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
+					albedo[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
 				}
 				break;
 			}
@@ -247,7 +251,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 
 				for (int i = 0; i < 4; i++)
 				{
-					RGBAout[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
+					albedo[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
 				}
 				break;
 			}
@@ -265,7 +269,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 					atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
 					asinf(p_norm.y) / PI + 0.5f
 				};
-				texture_sample(currentMat.baseTexture, uv, RGBAout);
+				texture_sample(currentMat.baseTexture, uv, albedo);
 
 				break;
 			}
@@ -283,9 +287,41 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 					atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
 					asinf(p_norm.y) / PI + 0.5f
 				};
-				texture_sample(currentMat.baseTexture, uv, RGBAout);
+				texture_sample(currentMat.baseTexture, uv, albedo);
 
 				break;
+			}
+		}
+	}
+
+	int isDirectlyLit = 0;
+
+	// ---direct lighting---
+	if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH)
+	{
+
+		Vector3 ref_dir = (Vector3){ 0.4, -0.8, 0.4472135 };// sun direction (normalized)
+		Ray rayR;
+
+		double EPS = 1e-8;
+		Vector3 pos = vector3_add(state.position, vector3_scale(state.normal, EPS));
+		create_ray(&rayR, pos, ref_dir);
+
+		// trace the sun ray
+		RayHit dl = (RayHit){ .dist = 1e30, .hit_id = NO_HIT, .localPosition = (Vector3){0,0,0}, .position = (Vector3){0,0,0}, .normal = (Vector3){0,0,0} };
+		BVH_traverse(BVHroot, rayR, bodies, &dl);
+
+		if (dl.hit_id == NO_HIT)
+		{
+			multiplyColor(skyCol, albedo);
+			isDirectlyLit = 1;
+		}
+		else
+		{
+			// set to black
+			for (int i = 0; i < 3; i++)
+			{
+				albedo[i] = 0;
 			}
 		}
 	}
@@ -312,17 +348,51 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 		ref_color[2] *= mat_ptr->reflectivity;
 		ref_color[3] *= mat_ptr->reflectivity;
 
-		addativeColor(ref_color, RGBAout);
+		addativeColor(ref_color, albedo);
 	}
+	
 
-	// ambient sky light
+	// ---Global Illumination---
+	/*if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH)
+	{
+		const int sampleCount = 32;
+		for (int i = 0; i < sampleCount; i++)
+		{
+			Vector3 ray_dir = vector3_normalize(vector3_random()); // cubic distribution (needs correction)
+
+			// if the ray points into the surface flip it
+			// this gets us a half hemisphere
+			if (vector3_dot(ray_dir, state.normal) < 0)
+			{
+				ray_dir = vector3_reflect(ray_dir, state.normal);
+			}
+
+			double EPS = 1e-4;
+			Vector3 pos = vector3_add(state.position, vector3_scale(state.normal, EPS));
+
+			Ray rayR;
+			create_ray(&rayR, pos, ray_dir);
+
+			BYTE ref_color[4];
+			raytrace(ref_color, BVHroot, bodies, matIDs, mats, count, rayR, MAX_RT_DEPTH); // only one bounce
+
+			multiplyColor((BYTE[4]){255 / sampleCount, 255 / sampleCount, 255 / sampleCount, 255},ref_color);
+
+			addativeColor(ref_color, albedo);
+		}
+	}*/
+
+	// ---ambient sky light---
 	if (state.hit_id == NO_HIT)
 	{
-		RGBAout[0] = 200;
-		RGBAout[1] = 200;
-		RGBAout[2] = 230;
-		RGBAout[3] = 255;
+		for (int i = 0; i < 4; i++)
+		{
+			albedo[i] = skyCol[i];
+		}
 	}
+
+	// albido is now multiplied with lighting
+	addativeColor(albedo, RGBAout);
 
 #if _DEBUG || _BENCHMARK
 	// render Bounding Volume Hierarchy
