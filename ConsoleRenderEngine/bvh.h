@@ -52,6 +52,15 @@ typedef struct MortonIDPairs {
 
 Bounds BVH_calculateBounds(Body body);
 
+inline int BVH_boundsIntersect(Bounds a, Bounds b)
+{
+	return !(
+		b.min.x > a.max.x || b.max.x < a.min.x ||
+		b.min.y > a.max.y || b.max.y < a.min.y ||
+		b.min.z > a.max.z || b.max.z < a.min.z
+		);
+}
+
 void BVH_quicksortMortonCodes_L(MortonIDPairs* mortonIDpair_list, int low, int high);
 
 void BVH_quicksortMortonCodes(MortonIDPairs* mortonIDpair_list, int low, int high);

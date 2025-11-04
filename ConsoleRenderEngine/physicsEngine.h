@@ -8,6 +8,7 @@
 #include "body.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include "bvh.h"
 
 typedef struct {
 	Body body;
@@ -47,6 +48,7 @@ typedef struct {
 	Vector3 contact_point;
 } Contact;
 
+
 // Narrowphase collision tests
 Contact collide_sphere_plane(RigidBody* sphere, RigidBody* plane);
 Contact collide_box_plane(RigidBody* box, RigidBody* plane);
@@ -54,14 +56,18 @@ Contact collide_sphere_sphere(RigidBody* sphereA, RigidBody* sphereB);
 Contact collide_box_sphere(RigidBody* box, RigidBody* sphere);
 Contact collide_box_box(RigidBody* boxA, RigidBody* boxB);
 
+// returns the ids of the rigidbodies it **may** overlap with in overlap_ids[]
+void broadphase_collision_test(BVHNode* node, Bounds rb_bounds, int overlap_ids[], int* idx);
+
 // Collision Resolution
 void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitution, double friction);
 
-#define MAX_BODIES 1024
+#define MAX_RIGIDBODIES 1024
 
 typedef struct {
-	RigidBody rigidbodies[MAX_BODIES];
-	Body bodies[MAX_BODIES]; // for rendering
+	RigidBody rigidbodies[MAX_RIGIDBODIES];
+	Body bodies[MAX_RIGIDBODIES]; // for rendering
+	BVHNode* bvh_ptr;
 	int body_count;
 
 	Vector3 gravity;

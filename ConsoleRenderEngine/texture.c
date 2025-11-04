@@ -14,6 +14,8 @@ char texture_ValToChar(BYTE value)
 
 int texture_sample(Texture* texture_ptr, Vector2 pos, BYTE RGBA[4])
 {
+    RGBA[3] = 255;
+
     float scale = texture_ptr->uvScale;
     float u = pos.x * scale;
     float v = pos.y * scale;
@@ -22,6 +24,12 @@ int texture_sample(Texture* texture_ptr, Vector2 pos, BYTE RGBA[4])
     switch (texture_ptr->texMode)
     {
     case TEXMODE_CLAMPED:
+        if (u < 0 || u > 1 || v < 0 || v > 1)
+        {
+            for (int n = 0; n < 4; n++)
+                RGBA[n] = 0;
+            return 1;
+        }
         u = fminf(fmaxf(u, 0.0f), 0.999999f);
         v = fminf(fmaxf(v, 0.0f), 0.999999f);
         break;

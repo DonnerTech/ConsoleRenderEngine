@@ -14,7 +14,7 @@ void randomizePositions(Body* bodies, int count, double distance);
 void physics_test(void)
 {
 	// INITIALIZE MATERIALS AND TEXTURES
-	const int mat_count = 4;
+	const int mat_count = 5;
 
 	Material* mat_list = (Material*)malloc(sizeof(Material) * mat_count);
 
@@ -24,28 +24,41 @@ void physics_test(void)
 		return;
 	}
 
+	// floor mat
 	create_material(&mat_list[0], PROJECT_PLANER, (BYTE[4]) { 64, 64, 64, 255 }, 0);
 	const short texture_path_0[60] = L"textures\\kenney_prototype-textures\\PNG\\Dark\\texture_05.png";
 	if (mat_list[0].baseTexture == NULL || !texLoader_LoadTexture(mat_list[0].baseTexture, texture_path_0))
 	{printf("Texture Load Fail"); return;}
 	mat_list[0].baseTexture->uvScale = 0.0125f;
 
-
-	create_material(&mat_list[1], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 100, 100, 100, 255 }, 1);
+	// orange mat
+	create_material(&mat_list[1], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 250, 250, 250, 255 }, 1);
 	texLoader_generateTexture(mat_list[1].baseTexture, 4, 2, 2);
 	texLoader_fillTexture(mat_list[1].baseTexture, (BYTE[4]) { 200, 150, 10, 255 });
 
-	create_material(&mat_list[2], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 20, 20, 20, 255 }, 1);
+	// blue mat
+	create_material(&mat_list[2], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 250, 2, 2, 255 }, 1);
 	texLoader_generateTexture(mat_list[2].baseTexture, 4, 2, 2);
 	texLoader_fillTexture(mat_list[2].baseTexture, (BYTE[4]) { 20, 150, 250, 255 });
 
+	// grid on sphere mat
 	create_material(&mat_list[3], PROJECT_LOCAL_TRIPLANER, (BYTE[4]) { 0, 0, 0, 0 }, 0);
 	const short texture_path_1[60] = L"textures\\kenney_prototype-textures\\PNG\\Light\\texture_06.png";
 	if (mat_list[3].baseTexture == NULL || !texLoader_LoadTexture(mat_list[3].baseTexture, texture_path_1))
 	{printf("Texture Load Fail"); return;}
 	mat_list[3].baseTexture->uvScale = 0.25f;
 
-	short* matIDs = calloc(BODY_COUNT+1, sizeof(short));
+	// finite plane mat
+	create_material(&mat_list[4], PROJECT_TRIPLANER, (BYTE[4]) { 64, 64, 64, 255 }, 0);
+	const short texture_path_2[60] = L"textures\\kenney_prototype-textures\\PNG\\Light\\texture_08.png";
+	if (mat_list[4].baseTexture == NULL || !texLoader_LoadTexture(mat_list[4].baseTexture, texture_path_2))
+	{
+		printf("Texture Load Fail"); return;
+	}
+	mat_list[4].baseTexture->texMode = TEXMODE_CLAMPED;
+	mat_list[4].baseTexture->uvScale = 0.5f;
+
+	short* matIDs = calloc(BODY_COUNT, sizeof(short));
 
 	if(matIDs == NULL)
 	{
@@ -60,38 +73,42 @@ void physics_test(void)
 	// initialize the world with earth's gravity
 	physicsWorld_Init(&world, (Vector3) { 0.0, 9.81, 0.0 }); // 9.81
 
-	for (int i = 0; i < BODY_COUNT; i++)
+	for (int i = 0; i < BODY_COUNT/2-1; i++)
 	{
 		// creates a sphere
 		matIDs[world.body_count] = i % 3 + 1; // alternate between texture ids 1 through 3
 
 		double size = 0.5 + (double)(rand() % 1000) / 500;
+		if (i == 0)
+			size = 0.25;
 		Vector3 position = vector3_add((Vector3) { 0.0, -2.5 - size * i, 2.0 }, vector3_scale(vector3_random(), 2));
-
 		RigidBody sphere = rb_create_sphere(position, size, 1.0);
 		sphere.restitution = 1;
 		sphere.friction = 1;
 		physicsWorld_AddBody(&world, sphere);
-
+	}
+	for (int i = 0; i < BODY_COUNT / 2; i++)
+	{
 		//creates a box
-		//Vector3 half_extents = (Vector3){0.5, 0.5, 0.5};
-		//Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * (i*2 + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
+		matIDs[world.body_count] = i % 3 + 1;
 
-		//Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
-		//orientation = quat_normalize(orientation);
-		//RigidBody box = rb_create_box(position, half_extents, orientation, 1.0);
-		//box.restitution = 0.2;
-		//physicsWorld_AddBody(&world, box);
+		Vector3 half_extents = (Vector3){ 0.5, 0.5, 0.5 };
+		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * 2 * (i + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
+		Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
+		orientation = quat_normalize(orientation);
+		RigidBody box = rb_create_box(position, half_extents, orientation, 1.0);
+		box.restitution = 0.2;
+		box.friction = 1;
+		physicsWorld_AddBody(&world, box);
 	}
 	
 
 	// creates the ground plane
 	matIDs[world.body_count] = 0;
-	RigidBody ground = rb_create_plane((Vector3) { 0.0, -1.0, 0.0 }, -1.5);
+	RigidBody ground = rb_create_plane((Vector3) { 0.0, -1.0, 0.0 }, -5);
 	ground.restitution = 0.5;
 	ground.friction = 1;
 	physicsWorld_AddBody(&world, ground);
-
 
 	// INITIALIZE THE RENDERER
 	int init_status = userInit();
@@ -112,27 +129,36 @@ void physics_test(void)
 	// update loop
 	while (isRunning)
 	{
+		// bounding volume creation
+		BVHNode* BVHroot = BVH_createTree(world.bodies, world.body_count);
+		world.bvh_ptr = BVHroot;
 
 		// update physics
 		sim_frequency = 0;
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 9; i++)
 		{
 			//playerController(&world.rigidbodies[0], camera_angle);
 
 			// update
-			physicsWorld_Update(&world, 0.00001 * deltaTime); // 16% realtime
+			
+			physicsWorld_Update(&world, 0.00000033 * deltaTime);
 			sim_frequency++;
+
+			BVH_updateTreeBounds(BVHroot, world.bodies);
 		}
 
-		//cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, deltaTime);
-		freeCam(&camera_pos, &camera_angle, deltaTime);
+		//cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, 1000 / deltaTime);
+		freeCam(&camera_pos, &camera_angle, deltaTime / 16.0);
 
 		//rendering
-		if (!renderer_raytrace(world.bodies, matIDs, mat_list, world.body_count, camera_pos, camera_angle, 90.0))
+		if (!renderer_raytrace(BVHroot, world.bodies, matIDs, mat_list, world.body_count, camera_pos, camera_angle, 90.0))
 		{
 			printf("RT Error!");
 			system("pause");
 		}
+
+		world.bvh_ptr = NULL;
+		BVH_freeTree(BVHroot);
 
 		// send frame to console
 		renderFrame();
@@ -166,7 +192,7 @@ void physics_test(void)
 
 		// print the simulation frequency
 		sim_frequency *= (1000 / deltaTime);
-		printf("TPS: %.2lf\n", sim_frequency);
+		printf("TPS: %.3lf\n", sim_frequency);
 		// frame timing
 		printfFrameTimes(16);
 
@@ -255,11 +281,13 @@ void bvh_test(void)
 		freeCam(&camera_pos, &camera_angle, deltaTime);
 
 		//rendering
-		if (!renderer_raytrace(bodies, matIDs, mat_list, BODY_COUNT, camera_pos, camera_angle, 90.0))
+		BVHNode* BVHroot = BVH_createTree(bodies, BODY_COUNT);
+		if (!renderer_raytrace(BVHroot, bodies, matIDs, mat_list, BODY_COUNT, camera_pos, camera_angle, 90.0))
 		{
 			printf("RT Error!");
 			system("pause");
 		}
+		BVH_freeTree(BVHroot);
 
 		if (GetAsyncKeyState('T') & 0x8000)
 		{
@@ -371,8 +399,9 @@ void playerController(RigidBody *player, Quaternion rotation)
 
 void freeCam(Vector3* camera_pos, Quaternion* camera_angle, double dt)
 {
+
 	const double moveSpeed = 0.25;
-	const double rotSpeed = 4.0;
+	const double rotSpeed = 2.0;
 
 	Vector3 move = { 0 };
 	double yawInput = 0;
@@ -393,12 +422,12 @@ void freeCam(Vector3* camera_pos, Quaternion* camera_angle, double dt)
 	if (GetAsyncKeyState(VK_RIGHT) & 0x8000) yawInput += 1;
 
 	// --- Apply yaw in world space ---
-	Quaternion yawRot = quat_from_axis_angle((Vector3) { 0, 1, 0 }, yawInput* rotSpeed* dt / 16 * (PI / 180.0));
+	Quaternion yawRot = quat_from_axis_angle((Vector3) { 0, 1, 0 }, yawInput* rotSpeed * dt * (PI / 180.0));
 	*camera_angle = quat_multiply(yawRot, *camera_angle);
 
 	// --- Apply pitch in camera's local space ---
 	Vector3 right = quat_rotate_vector(*camera_angle, (Vector3) { 1, 0, 0 });
-	Quaternion pitchRot = quat_from_axis_angle(right, pitchInput * rotSpeed * dt / 16 * (PI / 180.0));
+	Quaternion pitchRot = quat_from_axis_angle(right, pitchInput * rotSpeed * dt * (PI / 180.0));
 	*camera_angle = quat_multiply(pitchRot, *camera_angle);
 
 	// --- Normalize quaternion to avoid drift ---
@@ -411,10 +440,10 @@ void freeCam(Vector3* camera_pos, Quaternion* camera_angle, double dt)
 
 	Vector3 delta = vector3_add(
 		vector3_add(
-			vector3_scale(forward, move.z * moveSpeed * dt / 16),
-			vector3_scale(right, move.x * moveSpeed * dt / 16)
+			vector3_scale(forward, move.z * moveSpeed * dt),
+			vector3_scale(right, move.x * moveSpeed * dt)
 		),
-		vector3_scale(up, move.y * moveSpeed * dt / 16)
+		vector3_scale(up, move.y * moveSpeed * dt)
 	);
 
 	*camera_pos = vector3_add(*camera_pos, delta);

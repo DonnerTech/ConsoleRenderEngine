@@ -19,12 +19,44 @@ Bounds BVH_calculateBounds(Body body)
 		{
 			// creates a bounding box that is the worst case senerio
 			// could be optimized
-			Vector3 one = (Vector3){ 1,1,1 };
+			
+			//Vector3 one = (Vector3){ 1,1,1 };
+			//return (Bounds) {
+			//	.min = vector3_subtract(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents))),
+			//	.max = vector3_add(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents)))
+			//};
 
-			return (Bounds) {
-				.min = vector3_subtract(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents))),
-				.max = vector3_add(body.position, vector3_scale(one, vector3_magnitude(body.box.half_extents)))
-			};
+			Bounds bounds = {0};
+
+			for (int x = -1; x < 2; x+=2)
+			{
+				for (int y = -1; y < 2; y+=2)
+				{
+					for (int z = -1; z < 2; z+=2)
+					{
+						
+						Vector3 vertex = (Vector3){x * body.box.half_extents.x,y * body.box.half_extents.x,z * body.box.half_extents.x };
+						// orient vertex
+						vertex = quat_rotate_vector(body.orientation, vertex);
+
+						// add vertex apropriately
+						bounds.max.x = fmax(bounds.max.x, vertex.x);
+						bounds.max.y = fmax(bounds.max.y, vertex.y);
+						bounds.max.z = fmax(bounds.max.z, vertex.z);
+
+						bounds.min.x = fmin(bounds.min.x, vertex.x);
+						bounds.min.y = fmin(bounds.min.y, vertex.y);
+						bounds.min.z = fmin(bounds.min.z, vertex.z);
+					}
+				}
+			}
+
+			//translate bounds
+			bounds.max = vector3_add(body.position, bounds.max);
+			bounds.min = vector3_add(body.position, bounds.min);
+
+			return bounds;
+
 		}
 		case(SHAPE_PLANE):
 		{

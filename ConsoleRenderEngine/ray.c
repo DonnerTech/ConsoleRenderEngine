@@ -78,6 +78,10 @@ int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr, Vector3* local
 }
 
 
+// Ray and oriented bounding box intersection test
+// Credit to Scratchapixel for the Ray-AABB slab intersection tutorial
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html
+
 int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoint, Vector3* normal)
 {
 	*dist_ptr = 1e30;
@@ -85,30 +89,27 @@ int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoi
 	Ray ba_ray;
 
 	// convert the ray to the box's local space
+	const Quaternion inv_brot = quat_conjugate(box.orientation); // if this causes problems revert to quat_inverse(...)
 	Vector3 origin = vector3_subtract(ray.origin, box.position);
-	origin = quat_rotate_vector(quat_conjugate(box.orientation), origin);
+	origin = quat_rotate_vector(inv_brot, origin);
 
 	// convert direction to local space
-	Vector3 direction = quat_rotate_vector(quat_conjugate(box.orientation), ray.direction);
+	Vector3 direction = quat_rotate_vector(inv_brot, ray.direction);
 
 	create_ray(&ba_ray, origin, direction);
 
-	// do ray intersection with axis alligned bounding box
-	// Credit to Scratchapixel for the AABB-Ray optimized intersection algorithm
-	// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html
-
-	const Vector3 zero = (Vector3){ 0,0,0 };
+	const Vector3 zero = (Vector3){ 0 };
 
 	Vector3 bounds[2];
 	bounds[0] = vector3_subtract(zero, box.box.half_extents); // min
-	bounds[1] = vector3_add(zero, box.box.half_extents); // max
+	bounds[1] = box.box.half_extents; // max
 
-	double txmin = (bounds[ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
-	double txmax = (bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.invdir.x;
-	double tymin = (bounds[ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
-	double tymax = (bounds[1 - ray.sign[1]].y - ray.origin.y) * ray.invdir.y;
-	double tzmin = (bounds[ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
-	double tzmax = (bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.invdir.z;
+	double txmin = (bounds[ba_ray.sign[0]].x - ba_ray.origin.x) * ba_ray.invdir.x;
+	double txmax = (bounds[1 - ba_ray.sign[0]].x - ba_ray.origin.x) * ba_ray.invdir.x;
+	double tymin = (bounds[ba_ray.sign[1]].y - ba_ray.origin.y) * ba_ray.invdir.y;
+	double tymax = (bounds[1 - ba_ray.sign[1]].y - ba_ray.origin.y) * ba_ray.invdir.y;
+	double tzmin = (bounds[ba_ray.sign[2]].z - ba_ray.origin.z) * ba_ray.invdir.z;
+	double tzmax = (bounds[1 - ba_ray.sign[2]].z - ba_ray.origin.z) * ba_ray.invdir.z;
 
 	// Combine the slabs
 	double tmin = fmax(fmax(txmin, tymin), tzmin);
@@ -118,19 +119,22 @@ int rayBoxIntersection(Body box, Ray ray, double* dist_ptr, Vector3* localHitPoi
 	if (tmax < 0 || tmin > tmax)
 		return 0;
 
-	// If the ray starts inside the box
-	if (tmin < 0 && tmax > 0) {
-		*dist_ptr = 0.0;
-		return 1;
-	}
-
 	// Return the nearest valid distance
 	*dist_ptr = tmin;
 
 	*localHitPoint = vector3_add(ba_ray.origin, vector3_scale(ba_ray.direction, *dist_ptr));
 	
-	//TODO: normal calculation
-	*normal = (Vector3){ 0,0,0 };
+	*normal = (Vector3){ 0 };
+
+	//normal calculation with slabs
+	if (tmin == txmin)
+		normal->x = (ba_ray.direction.x > 0) ? -1 : 1;
+	else if (tmin == tymin)
+		normal->y = (ba_ray.direction.y > 0) ? -1 : 1;
+	else
+		normal->z = (ba_ray.direction.z > 0) ? -1 : 1;
+
+	*normal = quat_rotate_vector(box.orientation, *normal);
 
 	return 1;
 }
