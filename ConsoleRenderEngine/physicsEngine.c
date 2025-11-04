@@ -543,7 +543,7 @@ void physicsWorld_AddBody(PhysicsWorld* physicsWorld, RigidBody rigidbody)
 	physicsWorld->rigidbodies[physicsWorld->body_count++] = rigidbody; // Add to world
 }
 
-void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
+void physicsWorld_Update(PhysicsWorld* physicsWorld, BVHNode* BVHroot, double dt)
 {
 	// Already recieved user applied forces
 
@@ -564,28 +564,81 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 		integrate(&physicsWorld->rigidbodies[i], dt);
 	}
 
+	int haveIntersected[MAX_RIGIDBODIES] = { 0 };
+
 	// Collision detection and resolution
 	for (int i = 0; i < physicsWorld->body_count; i++)
 	{
-		for (int j = i + 1; j < physicsWorld->body_count; j++)
+
+		haveIntersected[i] = 1;
+
+		// handle planes
+		if (physicsWorld->rigidbodies[i].body.type == SHAPE_PLANE)
 		{
+			for (int j = 0; j < physicsWorld->body_count; j++)
+			{
+				if (i == j)
+					continue;
+
+				Contact contact;
+				contact.collided = false;
+
+				switch (physicsWorld->rigidbodies[j].body.type)
+				{
+				case SHAPE_SPHERE:
+					contact = collide_sphere_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
+					contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
+					break;
+				case SHAPE_BOX:
+					contact = collide_box_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
+					//contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
+					break;
+				case SHAPE_PLANE:
+					// Plane-plane collision is not defined
+					break;
+				}
+
+				if (contact.collided)
+				{
+					double average_restitution = (physicsWorld->rigidbodies[i].restitution * physicsWorld->rigidbodies[j].restitution) / 2.0;
+					double average_friction = (physicsWorld->rigidbodies[i].friction * physicsWorld->rigidbodies[j].friction) / 2.0;
+					resolve_contact(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j], contact, average_restitution, average_friction);
+				}
+			}
+
+			continue;
+		}
+
+		// handle bvh
+		int ids[MAX_RIGIDBODIES] = { 0 }; // or malloc for (physicsWorld->body_count)
+		int count = 0;
+		broadphase_collision_test(BVHroot, BVH_calculateBounds(physicsWorld->rigidbodies[i].body), ids, &count);
+
+		for (int j = 0; j < count; j++)
+		{
+			if (i == ids[j] || ids[j] == -1)
+				continue;
+
+			if (haveIntersected[ids[j]])
+				continue;
+
 			Contact contact;
 			contact.collided = false;
 			switch (physicsWorld->rigidbodies[i].body.type)
 			{
 				case SHAPE_SPHERE:
 				{
-					switch (physicsWorld->rigidbodies[j].body.type)
+					switch (physicsWorld->rigidbodies[ids[j]].body.type)
 					{
 						case SHAPE_SPHERE:
-							contact = collide_sphere_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
+							contact = collide_sphere_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							break;
 						case SHAPE_BOX:
-							contact = collide_box_sphere(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
+							contact = collide_box_sphere(&physicsWorld->rigidbodies[ids[j]], &physicsWorld->rigidbodies[i]);
 							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
 							break;
 						case SHAPE_PLANE:
-							contact = collide_sphere_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
+							contact = collide_sphere_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							contact.normal = vector3_scale(contact.normal, -1.0);
 							break;
 					}
@@ -593,35 +646,17 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 				}
 				case SHAPE_BOX:
 				{
-					switch (physicsWorld->rigidbodies[j].body.type)
+					switch (physicsWorld->rigidbodies[ids[j]].body.type)
 					{
 						case SHAPE_SPHERE:
-							contact = collide_box_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
+							contact = collide_box_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							break;
 						case SHAPE_BOX:
-							contact = collide_box_box(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
+							contact = collide_box_box(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							break;
 						case SHAPE_PLANE:
-							contact = collide_box_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
+							contact = collide_box_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
-							break;
-					}
-					break;
-				}
-				case SHAPE_PLANE:
-				{
-					switch (physicsWorld->rigidbodies[j].body.type)
-					{
-						case SHAPE_SPHERE:
-							contact = collide_sphere_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
-							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
-							break;
-						case SHAPE_BOX:
-							contact = collide_box_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
-							//contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
-							break;
-						case SHAPE_PLANE:
-							// Plane-plane collision is not defined
 							break;
 					}
 					break;
@@ -630,9 +665,9 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 
 			if (contact.collided)
 			{
-				double average_restitution = (physicsWorld->rigidbodies[i].restitution * physicsWorld->rigidbodies[j].restitution ) / 2.0;
-				double average_friction = (physicsWorld->rigidbodies[i].friction * physicsWorld->rigidbodies[j].friction) / 2.0;
-				resolve_contact(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j], contact, average_restitution, average_friction);
+				double average_restitution = (physicsWorld->rigidbodies[i].restitution * physicsWorld->rigidbodies[ids[j]].restitution ) / 2.0;
+				double average_friction = (physicsWorld->rigidbodies[i].friction * physicsWorld->rigidbodies[ids[j]].friction) / 2.0;
+				resolve_contact(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]], contact, average_restitution, average_friction);
 			}
 		}
 	}

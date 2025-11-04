@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 1000
+#define BODY_COUNT 10
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -141,7 +141,7 @@ void physics_test(void)
 
 			// update
 			
-			physicsWorld_Update(&world, 0.00000033 * deltaTime);
+			physicsWorld_Update(&world, BVHroot, 0.00000033 * deltaTime);
 			sim_frequency++;
 
 			BVH_updateTreeBounds(BVHroot, world.bodies);
