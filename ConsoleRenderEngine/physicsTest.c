@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 100
+#define BODY_COUNT 1000
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -39,7 +39,7 @@ void physics_test(void)
 	texLoader_generateTexture(mat_list[2].baseTexture, 4, 2, 2);
 	texLoader_fillTexture(mat_list[2].baseTexture, (BYTE[4]) { 20, 150, 250, 255 });
 
-	create_material(&mat_list[3], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 0, 0, 0, 0 }, 0);
+	create_material(&mat_list[3], PROJECT_LOCAL_TRIPLANER, (BYTE[4]) { 0, 0, 0, 0 }, 0);
 	const short texture_path_1[60] = L"textures\\kenney_prototype-textures\\PNG\\Light\\texture_06.png";
 	if (mat_list[3].baseTexture == NULL || !texLoader_LoadTexture(mat_list[3].baseTexture, texture_path_1))
 	{printf("Texture Load Fail"); return;}

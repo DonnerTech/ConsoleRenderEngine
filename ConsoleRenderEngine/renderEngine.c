@@ -4,6 +4,10 @@
 
 #define NUM_THREADS 32
 #define MAX_RT_DEPTH 2
+//[0, 127]
+#define RTGI_SAMPLES 0
+//[0, 255]
+#define RTGI_BRIGHTNESS 128
 
 //int width, height;
 //char* outputFrame;
@@ -355,8 +359,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 	// ---Global Illumination---
 	if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH)
 	{
-		const int sampleCount = 64;
-		for (int i = 0; i < sampleCount; i++)
+		for (int i = 0; i < RTGI_SAMPLES; i++)
 		{
 			Vector3 ray_dir = vector3_normalize(vector3_random()); // cubic distribution (needs correction)
 
@@ -367,7 +370,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 				ray_dir = vector3_reflect(ray_dir, state.normal);
 			}
 
-			double EPS = 1e-4;
+			double EPS = 1e-8;
 			Vector3 pos = vector3_add(state.position, vector3_scale(state.normal, EPS));
 
 			Ray rayR;
@@ -376,7 +379,12 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 			BYTE ref_color[4];
 			raytrace(ref_color, BVHroot, bodies, matIDs, mats, count, rayR, MAX_RT_DEPTH); // only one bounce
 
-			multiplyColor((BYTE[4]){255 / sampleCount, 255 / sampleCount, 255 / sampleCount, 255},ref_color);
+			multiplyColor((BYTE[4]){ 
+					RTGI_BRIGHTNESS / RTGI_SAMPLES, 
+					RTGI_BRIGHTNESS / RTGI_SAMPLES, 
+					RTGI_BRIGHTNESS / RTGI_SAMPLES, 
+					255},
+				ref_color);
 
 			addativeColor(ref_color, albedo);
 		}
@@ -426,13 +434,16 @@ typedef struct {
 	Vector3 camera_pos;
 	Quaternion camera_angle;
 	int count;
-	int id;
 	double fov;
+	int id;
+	int rand_seed;
 } RaytraceGroupArgs;
 
 DWORD WINAPI raytraceWorker(LPVOID arg)
 {
 	RaytraceGroupArgs* args = (RaytraceGroupArgs*)arg;
+
+	srand(args->rand_seed);
 
 	int width = outputFrame.texture.width;
 	int height = outputFrame.texture.height;
@@ -505,6 +516,7 @@ int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Ve
 		args->count = count;
 		args->fov = fov;
 
+		args->rand_seed = rand();
 		args->id = i;
 
 		threads[i] = CreateThread(
