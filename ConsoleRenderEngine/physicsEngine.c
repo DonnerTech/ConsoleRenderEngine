@@ -248,6 +248,8 @@ Contact collide_box_plane(RigidBody* box, RigidBody* plane)
 	// Calculates the deepest point
 	Contact contact = { 0 };
 	contact.collided = false;
+
+	// distances are negative.
 	double minDistance = 0;
 
 	for (int i = 0; i < 8; i++)
@@ -257,7 +259,7 @@ Contact collide_box_plane(RigidBody* box, RigidBody* plane)
 			minDistance = distances[i];
 
 			contact.collided = true;
-			contact.contact_depth = -distances[i];
+			contact.contact_depth = -distances[i]; // we negate the distance to get the penetration depth
 			contact.contact_point = corners[i];
 			contact.normal = vector3_scale(plane->body.plane.normal, -1.0);
 		}
@@ -296,9 +298,60 @@ Contact collide_sphere_sphere(RigidBody* sphereA, RigidBody* sphereB)
 
 Contact collide_box_sphere(RigidBody* box, RigidBody* sphere)
 {
-	// Unimplemented
 	Contact contact = { 0 };
-	contact.collided = false;
+
+	//Transforms the sphere's pos into boxes local space
+	Quaternion invBoxRot = quat_conjugate(box->body.orientation);
+	Vector3 localSphereCenter = vector3_subtract(sphere->body.position, box->body.position);
+	localSphereCenter = quat_rotate_vector(invBoxRot, localSphereCenter);
+
+	Vector3 he = box->body.box.half_extents;
+
+	// Clamp sphere center to box surface to get closest point in box local space
+	Vector3 localNearest = localSphereCenter;
+
+	if (localNearest.x < -he.x) localNearest.x = -he.x;
+	if (localNearest.x > he.x) localNearest.x = he.x;
+
+	if (localNearest.y < -he.y) localNearest.y = -he.y;
+	if (localNearest.y > he.y) localNearest.y = he.y;
+
+	if (localNearest.z < -he.z) localNearest.z = -he.z;
+	if (localNearest.z > he.z) localNearest.z = he.z;
+
+
+	Vector3 localDiff = vector3_subtract(localSphereCenter, localNearest);
+	double sqrDist = vector3_dot(localDiff, localDiff);
+	double radius = sphere->body.sphere.radius;
+
+	// If outside, check collision
+	if (sqrDist > radius * radius)
+		return contact;  // no collision
+
+	contact.collided = true;
+
+	double dist = sqrt(sqrDist);
+	Vector3 localNormal;
+
+	if (dist > 1e-16)
+		localNormal = vector3_scale(localDiff, 1.0 / dist);
+	else
+		// TODO: choose axis of maximum penetration
+		localNormal = (Vector3){ 0, 1, 0 };
+
+
+	Vector3 worldNormal = quat_rotate_vector(box->body.orientation, localNormal);
+	Vector3 worldClosest = quat_rotate_vector(box->body.orientation, localNearest);
+	worldClosest = vector3_add(worldClosest, box->body.position);
+
+	contact.normal = worldNormal;
+	contact.contact_depth = radius - dist;
+
+	// Contact point is on the boxes surface (prob good enough)
+	contact.contact_point = vector3_add(
+		worldClosest,
+		vector3_scale(worldNormal, contact.contact_depth * 0.5)
+	);
 
 	return contact;
 }
@@ -345,6 +398,8 @@ Contact collide_box_box(RigidBody* boxA, RigidBody* boxB)
 
 	double minPenetration = INFINITY;
 	Vector3 bestAxis = { 0 };
+
+	// TODO: 
 	int bestCase = -1;
 
 	// Test face axes of A
@@ -587,7 +642,7 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, BVHNode* BVHroot, double dt
 				{
 				case SHAPE_SPHERE:
 					contact = collide_sphere_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
-					contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
+					//contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
 					break;
 				case SHAPE_BOX:
 					contact = collide_box_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
@@ -616,7 +671,10 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, BVHNode* BVHroot, double dt
 
 		for (int j = 0; j < count; j++)
 		{
-			if (i == ids[j] || ids[j] == -1)
+			if (ids[j] == -1)
+				break;
+
+			if (i == ids[j])
 				continue;
 
 			if (haveIntersected[ids[j]])
@@ -635,7 +693,7 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, BVHNode* BVHroot, double dt
 							break;
 						case SHAPE_BOX:
 							contact = collide_box_sphere(&physicsWorld->rigidbodies[ids[j]], &physicsWorld->rigidbodies[i]);
-							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
+							//contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
 							break;
 						case SHAPE_PLANE:
 							contact = collide_sphere_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
@@ -650,6 +708,7 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, BVHNode* BVHroot, double dt
 					{
 						case SHAPE_SPHERE:
 							contact = collide_box_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
+							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
 							break;
 						case SHAPE_BOX:
 							contact = collide_box_box(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);

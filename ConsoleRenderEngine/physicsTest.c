@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 10
+#define BODY_COUNT 1000
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -37,7 +37,7 @@ void physics_test(void)
 	texLoader_fillTexture(mat_list[1].baseTexture, (BYTE[4]) { 200, 150, 10, 255 });
 
 	// blue mat
-	create_material(&mat_list[2], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 250, 2, 2, 255 }, 1);
+	create_material(&mat_list[2], PROJECT_LOCAL_SPHERICAL, (BYTE[4]) { 25, 2, 2, 255 }, 1);
 	texLoader_generateTexture(mat_list[2].baseTexture, 4, 2, 2);
 	texLoader_fillTexture(mat_list[2].baseTexture, (BYTE[4]) { 20, 150, 250, 255 });
 
@@ -73,7 +73,7 @@ void physics_test(void)
 	// initialize the world with earth's gravity
 	physicsWorld_Init(&world, (Vector3) { 0.0, 9.81, 0.0 }); // 9.81
 
-	for (int i = 0; i < BODY_COUNT/2-1; i++)
+	for (int i = 0; i < BODY_COUNT / 2; i++)
 	{
 		// creates a sphere
 		matIDs[world.body_count] = i % 3 + 1; // alternate between texture ids 1 through 3
@@ -87,12 +87,12 @@ void physics_test(void)
 		sphere.friction = 1;
 		physicsWorld_AddBody(&world, sphere);
 	}
-	for (int i = 0; i < BODY_COUNT / 2; i++)
+	for (int i = 0; i < BODY_COUNT / 2 - 1; i++)
 	{
 		//creates a box
 		matIDs[world.body_count] = i % 3 + 1;
 
-		Vector3 half_extents = (Vector3){ 0.5, 0.5, 0.5 };
+		Vector3 half_extents = vector3_add((Vector3){ 2, 2, 2 }, vector3_random());
 		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * 2 * (i + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
 		Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
 		orientation = quat_normalize(orientation);
@@ -144,6 +144,7 @@ void physics_test(void)
 			physicsWorld_Update(&world, BVHroot, 0.00000033 * deltaTime);
 			sim_frequency++;
 
+			// update the bounding volume
 			BVH_updateTreeBounds(BVHroot, world.bodies);
 		}
 

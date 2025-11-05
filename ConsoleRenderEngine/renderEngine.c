@@ -301,6 +301,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 		sample_mat(*mat_ptr, state, albedo);
 	}
 	
+	char directly_lit = 0;
 	// ---direct lighting---
 	if (state.hit_id != NO_HIT)
 	{
@@ -318,10 +319,12 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 		// if we hit nothing apply the sky color
 		if (dl.hit_id == NO_HIT)
 		{
+			directly_lit = 1;
 			addativeColor(skyCol, indirect_lighting);
 		}
 		else
 		{
+			directly_lit = 0;
 			// set to black
 			for (int i = 0; i < 3; i++)
 			{
@@ -357,7 +360,7 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 	
 
 	// ---Global Illumination---
-	if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH)
+	if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH && !directly_lit)
 	{
 		for (int i = 0; i < RTGI_SAMPLES; i++)
 		{
