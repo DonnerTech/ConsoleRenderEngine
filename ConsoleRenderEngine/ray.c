@@ -73,7 +73,7 @@ int raySphereIntersection(Body sphere, Ray ray, double* dist_ptr, Vector3* local
 	Vector3 hitPoint = vector3_add(ray.origin, vector3_scale(ray.direction, t));
 	*localHitPoint = vector3_subtract(hitPoint, sphere.position);
 	*normal = vector3_normalize(*localHitPoint);
-	*localHitPoint = quat_rotate_vector(sphere.orientation, *localHitPoint);
+	*localHitPoint = quat_rotate_vector(quat_conjugate(sphere.orientation), *localHitPoint); // switch to quat_inverse if buggy
 	return 1;
 }
 
