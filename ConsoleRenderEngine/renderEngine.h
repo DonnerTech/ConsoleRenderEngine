@@ -22,7 +22,7 @@
 #define NUM_THREADS 32
 #define MAX_RT_DEPTH 1
 //[0, 127]
-#define RTGI_SAMPLES 0
+#define RTGI_SAMPLES 2
 //[0, 255]
 #define RTGI_BRIGHTNESS 255
 

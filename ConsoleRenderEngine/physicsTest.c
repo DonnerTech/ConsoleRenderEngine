@@ -1,6 +1,6 @@
 #include "physicsTest.h"
 
-#define BODY_COUNT 10
+#define BODY_COUNT 500
 #define TWO_PI 6.28318530718
 
 void playerController(RigidBody *player, Quaternion rotation);
@@ -92,11 +92,11 @@ void physics_test(void)
 		//creates a box
 		matIDs[world.body_count] = i % 3 + 1;
 
-		Vector3 half_extents = vector3_add((Vector3){ 2, 2, 2 }, vector3_random());
+		Vector3 half_extents = vector3_add((Vector3){ 12, 12, 12 }, vector3_scale(vector3_random(), 10));
 		Vector3 position = vector3_add((Vector3) { 0.0, -1.0 - 2 * half_extents.y * 2 * (i + 1), 4.0 }, vector3_scale(vector3_random(), 0.05));
 		Quaternion orientation = quat_from_euler(vector3_random().x * TWO_PI, vector3_random().y * TWO_PI, vector3_random().z * TWO_PI);
 		orientation = quat_normalize(orientation);
-		RigidBody box = rb_create_box(position, half_extents, orientation, 1.0);
+		RigidBody box = rb_create_box(position, half_extents, orientation, vector3_magnitude(half_extents));
 		box.restitution = 0.2;
 		box.friction = 1;
 		physicsWorld_AddBody(&world, box);
@@ -149,8 +149,8 @@ void physics_test(void)
 			BVH_validateTree(world.bvh_ptr);
 		}
 
-		cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, 1000 / deltaTime);
-		//freeCam(&camera_pos, &camera_angle, deltaTime / 16.0);
+		cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, deltaTime);
+		//freeCam(&camera_pos, &camera_angle, deltaTime);
 
 		//rendering
 		if (!renderer_raytrace(world.bvh_ptr, world.bodies, matIDs, mat_list, world.body_count, camera_pos, camera_angle, 90.0))
@@ -238,11 +238,17 @@ void bvh_test(void)
 	create_material(&mat_list[1], PROJECT_TRIPLANER, (BYTE[4]) { 200, 50, 500, 255 }, 1);
 	texLoader_generateTexture(mat_list[1].baseTexture, 4, 2, 2);
 
-	short* matIDs = calloc(BODY_COUNT+1, sizeof(short));
+	short* matIDs = calloc(BODY_COUNT, sizeof(short));
+
+	if (matIDs == NULL)
+		return;
 
 	// INITIALIZE BODIES
 
-	Body bodies[BODY_COUNT] = { 0 };
+	Body* bodies = (Body*)calloc(BODY_COUNT, (sizeof(Body)));
+
+	if (bodies == NULL)
+		return;
 
 	for (int i = 0; i < BODY_COUNT; i++)
 	{
@@ -271,32 +277,37 @@ void bvh_test(void)
 	Quaternion camera_angle = quat_from_axis_angle((Vector3) { 1, 0, 0 }, -3.14 / 8.0);
 	Vector3 camera_pos = { 0 };
 
+	BVHNode* BVHroot = BVH_createTree(bodies, BODY_COUNT);
+
 	// update loop
 	while (isRunning)
 	{
 		if (GetAsyncKeyState('R') & 0x8000)
 		{
 			randomizePositions(bodies,  BODY_COUNT, 40);
+
+			// recreate BVH tree
+			BVH_freeTree(BVHroot);
+			BVHroot = BVH_createTree(bodies, BODY_COUNT);
 		}
 
 		freeCam(&camera_pos, &camera_angle, deltaTime);
 
 		//rendering
-		BVHNode* BVHroot = BVH_createTree(bodies, BODY_COUNT);
+
 		if (!renderer_raytrace(BVHroot, bodies, matIDs, mat_list, BODY_COUNT, camera_pos, camera_angle, 90.0))
 		{
 			printf("RT Error!");
 			system("pause");
 		}
-		BVH_freeTree(BVHroot);
 
 		if (GetAsyncKeyState('T') & 0x8000)
 		{
-			BVHNode* node = BVH_createTree(bodies, BODY_COUNT);
-			BVH_DebugPrint(node);
+			BVH_DebugPrint(BVHroot);
 			system("pause");
 			system("cls");
 		}
+
 
 		// send frame to console
 		renderFrame();
@@ -317,6 +328,10 @@ void bvh_test(void)
 		}
 	}
 
+	BVH_freeTree(BVHroot);
+
+	free(bodies);
+
 	free(matIDs);
 	free_material_list(mat_list, mat_count);
 
@@ -335,7 +350,7 @@ void randomizePositions(Body* bodies, int count, double distance)
 
 void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle, double dt)
 {
-	const double speed = 150;
+	const double speed = 10;
 	double input = 0;
 
 	if (GetAsyncKeyState(VK_LEFT) & 0x8000) {
@@ -345,7 +360,7 @@ void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_an
 		input++;
 	}
 
-	*camera_angle = quat_integrate(*camera_angle, (Vector3) { 0, input * speed * dt / 16, 0 }, 0.00016);
+	*camera_angle = quat_integrate(*camera_angle, (Vector3) { 0, input * speed * dt, 0 }, 0.00016);
 
 
 	Vector3 camera_forward = quat_rotate_vector(*camera_angle, (Vector3) { 0, 0, 2 });
@@ -401,8 +416,8 @@ void playerController(RigidBody *player, Quaternion rotation)
 void freeCam(Vector3* camera_pos, Quaternion* camera_angle, double dt)
 {
 
-	const double moveSpeed = 0.25;
-	const double rotSpeed = 2.0;
+	const double moveSpeed = 0.02;
+	const double rotSpeed = 2.0 / 16;
 
 	Vector3 move = { 0 };
 	double yawInput = 0;
