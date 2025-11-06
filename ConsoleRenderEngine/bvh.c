@@ -35,7 +35,7 @@ Bounds BVH_calculateBounds(Body body)
 					for (int z = -1; z < 2; z+=2)
 					{
 						
-						Vector3 vertex = (Vector3){x * body.box.half_extents.x,y * body.box.half_extents.x,z * body.box.half_extents.x };
+						Vector3 vertex = (Vector3){x * body.box.half_extents.x,y * body.box.half_extents.y,z * body.box.half_extents.z };
 						// orient vertex
 						vertex = quat_rotate_vector(body.orientation, vertex);
 
@@ -466,7 +466,7 @@ void BVH_updateTreeBounds(BVHNode* node, Body* body_list)
 		for (int i = 1; i < IDS_MAX; i++)
 		{
 			if (node->ids[i] == -1)
-				continue; // break;
+				break;
 
 			node->bounds = Bounds_union(node->bounds, BVH_calculateBounds(body_list[node->ids[i]]));
 		}

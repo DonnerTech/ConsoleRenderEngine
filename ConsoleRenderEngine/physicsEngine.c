@@ -598,7 +598,7 @@ void physicsWorld_AddBody(PhysicsWorld* physicsWorld, RigidBody rigidbody)
 	physicsWorld->rigidbodies[physicsWorld->body_count++] = rigidbody; // Add to world
 }
 
-void physicsWorld_Update(PhysicsWorld* physicsWorld, BVHNode* BVHroot, double dt)
+void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 {
 	// Already recieved user applied forces
 
@@ -667,7 +667,7 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, BVHNode* BVHroot, double dt
 		// handle bvh
 		int ids[MAX_RIGIDBODIES] = { 0 }; // or malloc for (physicsWorld->body_count)
 		int count = 0;
-		broadphase_collision_test(BVHroot, BVH_calculateBounds(physicsWorld->rigidbodies[i].body), ids, &count);
+		broadphase_collision_test(physicsWorld->bvh_ptr, BVH_calculateBounds(physicsWorld->rigidbodies[i].body), ids, &count);
 
 		for (int j = 0; j < count; j++)
 		{

@@ -130,36 +130,36 @@ void physics_test(void)
 	while (isRunning)
 	{
 		// bounding volume creation
-		BVHNode* BVHroot = BVH_createTree(world.bodies, world.body_count);
-		world.bvh_ptr = BVHroot;
+		world.bvh_ptr = BVH_createTree(world.bodies, world.body_count);
 
 		// update physics
 		sim_frequency = 0;
 		for (int i = 0; i < 9; i++)
 		{
-			//playerController(&world.rigidbodies[0], camera_angle);
+			playerController(&world.rigidbodies[0], camera_angle);
 
 			// update
 			
-			physicsWorld_Update(&world, BVHroot, 0.00000033 * deltaTime);
+			physicsWorld_Update(&world, 0.00000033 * deltaTime);
 			sim_frequency++;
 
 			// update the bounding volume
-			BVH_updateTreeBounds(BVHroot, world.bodies);
+			BVH_updateTreeBounds(world.bvh_ptr, world.bodies);
+
+			BVH_validateTree(world.bvh_ptr);
 		}
 
-		//cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, 1000 / deltaTime);
-		freeCam(&camera_pos, &camera_angle, deltaTime / 16.0);
+		cameraController(world.rigidbodies[0].body.position, &camera_pos, &camera_angle, 1000 / deltaTime);
+		//freeCam(&camera_pos, &camera_angle, deltaTime / 16.0);
 
 		//rendering
-		if (!renderer_raytrace(BVHroot, world.bodies, matIDs, mat_list, world.body_count, camera_pos, camera_angle, 90.0))
+		if (!renderer_raytrace(world.bvh_ptr, world.bodies, matIDs, mat_list, world.body_count, camera_pos, camera_angle, 90.0))
 		{
 			printf("RT Error!");
 			system("pause");
 		}
 
-		world.bvh_ptr = NULL;
-		BVH_freeTree(BVHroot);
+		BVH_freeTree(world.bvh_ptr);
 
 		// send frame to console
 		renderFrame();
@@ -335,7 +335,7 @@ void randomizePositions(Body* bodies, int count, double distance)
 
 void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_angle, double dt)
 {
-	const double speed = 350;
+	const double speed = 150;
 	double input = 0;
 
 	if (GetAsyncKeyState(VK_LEFT) & 0x8000) {
@@ -355,7 +355,7 @@ void cameraController(Vector3 target, Vector3* camera_pos, Quaternion* camera_an
 
 void playerController(RigidBody *player, Quaternion rotation)
 {
-	const double power = 10;
+	const double power = 40;
 	const double counterMoveMult = 0.02;
 	
 	Vector2 input = { 0 };

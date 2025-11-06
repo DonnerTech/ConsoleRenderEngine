@@ -20,7 +20,7 @@
 #include "fastTrig.h"
 
 #define NUM_THREADS 32
-#define MAX_RT_DEPTH 2
+#define MAX_RT_DEPTH 1
 //[0, 127]
 #define RTGI_SAMPLES 0
 //[0, 255]
