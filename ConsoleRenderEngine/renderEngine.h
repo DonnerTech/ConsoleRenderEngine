@@ -19,6 +19,13 @@
 
 #include "fastTrig.h"
 
+#define NUM_THREADS 32
+#define MAX_RT_DEPTH 1
+//[0, 127]
+#define RTGI_SAMPLES 2
+//[0, 255]
+#define RTGI_BRIGHTNESS 255
+
 typedef struct {
 	COORD position;
 	Texture texture;
@@ -29,7 +36,7 @@ double deltaTime;
 
 static void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth);
 
-int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
+int renderer_raytrace(BVHNode* BVHroot, Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 
 int renderer_raytrace_b(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov);
 

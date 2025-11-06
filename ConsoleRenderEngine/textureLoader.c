@@ -19,7 +19,9 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
     );
     if (FAILED(hr)) return 0;
 
+#if _DEBUG
     printf("Image Factory Init Success\n");
+#endif // _DEBUG
 
     // Load the image
     IWICBitmapDecoder* decoder = NULL;
@@ -33,7 +35,9 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
     );
     if (FAILED(hr)) return 0;
 
+#if _DEBUG
     printf("Image Found\n");
+#endif
 
     IWICBitmapFrameDecode* frame = NULL;
     decoder->lpVtbl->GetFrame(decoder, 0, &frame);
@@ -55,7 +59,9 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
         WICBitmapPaletteTypeCustom
     );
 
+#if _DEBUG
     printf("Image Converter Created\n");
+#endif
 
     // Allocate texture data for RGBA pixels
     //texture = (Texture*)malloc(sizeof(Texture));
@@ -73,7 +79,9 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
     texture->imageSize = texture->stride * height;
     texture->pixeldata = (BYTE*)malloc(texture->imageSize);
 
+#if _DEBUG
     printf("Texture Initialized\n");
+#endif
 
     // Copy pixel data into a buffer
     converter->lpVtbl->CopyPixels(
@@ -84,7 +92,9 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
         texture->pixeldata
     );
 
+#if _DEBUG
     printf("Successfully Loaded %ux%u RGBA image.\n", width, height);
+#endif
 
     // Cleanup
     converter->lpVtbl->Release(converter);
@@ -94,7 +104,9 @@ int texLoader_LoadTexture(Texture* texture, const unsigned short* const fileName
     factory->lpVtbl->Release(factory);
     CoUninitialize();
 
+#if _DEBUG
     printf("Texture Loader Cleanup Complete\n");
+#endif
 
     return 1;
 }
@@ -138,7 +150,6 @@ void texLoader_test(void)
     Texture* textureA = (Texture*)malloc(sizeof(Texture));
 
     texLoader_LoadTexture(textureA, L"textures\\texture_test.png");
-
 
     texture_DebugPrint(textureA, 0);
 

@@ -32,6 +32,8 @@ int main(void)
 
 	testRayPlane(1000000);
 
+	testRayAABB(1000000);
+
 	test_trig_tables();
 
 	testBVHtree(10, 25, 1);

@@ -31,6 +31,44 @@ void testRaySphere(int iter)
 	printf("testRaySphere(%d) took: %d ms\n", iter, (clock() - start) * 1000 / CLOCKS_PER_SEC);
 }
 
+void testRayAABB(int iter)
+{
+	Bounds* bounds = (Bounds*)malloc(sizeof(Bounds) * iter);
+
+	if (bounds == NULL)
+		return;
+
+	for (int i = 0; i < iter; i++)
+	{
+		Body body = { 0 };
+
+		body.type = SHAPE_BOX;
+		body.box.half_extents = (Vector3){ 1,1,1 };
+
+		body.position = vector3_scale(vector3_random(), 100);
+		body.orientation = quat_from_axis_angle(vector3_normalize(vector3_random()), 0);
+
+		bounds[i] = BVH_calculateBounds(body);
+	}
+
+	Ray ray;
+	create_ray(&ray, (Vector3) { 0, 0, 0 }, (Vector3) { 0, 0, 1 });
+
+	int dist;
+	//int avgDist;
+	clock_t start = clock();
+	for (int i = 0; i < iter; i++)
+	{
+
+		int hit = ray_aabb(ray, bounds[i].min, bounds[i].max, 1e30, &dist);
+		//avgDist += dist;
+	}
+
+	free(bounds);
+
+	printf("testRayAABB(%d) took: %d ms\n", iter, (clock() - start) * 1000 / CLOCKS_PER_SEC);
+}
+
 void testRayBox(int iter)
 {
 	Body* body = (Body*)malloc(sizeof(Body) * iter);

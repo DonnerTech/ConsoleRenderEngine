@@ -2,9 +2,6 @@
 
 #include "renderEngine.h"
 
-#define NUM_THREADS 32
-#define MAX_RT_DEPTH 2
-
 //int width, height;
 //char* outputFrame;
 
@@ -128,16 +125,127 @@ void multiplyColor(BYTE RGBAin[4], BYTE RGBAout[4])
 	RGBAout[3] = (BYTE)(a01 * 255.0f);
 }
 
+void sample_mat(Material currentMat, RayHit state, BYTE albedo[4])
+{
+
+	// planar projection
+	switch (currentMat.projecton)
+	{
+	case(PROJECT_PLANER):
+	{
+		texture_sample(currentMat.baseTexture, (Vector2) { state.localPosition.x, -state.localPosition.z }, albedo);
+		break;
+	}
+	case(PROJECT_TRIPLANER):
+	{
+		/* glsl sudocode:
+		vec3 n = abs(normalize(normal));
+		vec3 xProj = position.yz;
+		vec3 yProj = position.xz;
+		vec3 zProj = position.xy;
+		vec4 xTex = texture(tex, xProj * scale);
+		vec4 yTex = texture(tex, yProj * scale);
+		vec4 zTex = texture(tex, zProj * scale);
+		vec4 color = (xTex * n.x + yTex * n.y + zTex * n.z) / (n.x + n.y + n.z);
+		*/
+
+		Vector3 n = (Vector3){ fabs(state.normal.x), fabs(state.normal.y), fabs(state.normal.z) };
+		Vector2 xProj = (Vector2){ state.position.y, state.position.z };
+		Vector2 yProj = (Vector2){ state.position.x, state.position.z };
+		Vector2 zProj = (Vector2){ state.position.x, state.position.y };
+
+		BYTE cx[4], cy[4], cz[4];
+		texture_sample(currentMat.baseTexture, xProj, cx);
+		texture_sample(currentMat.baseTexture, yProj, cy);
+		texture_sample(currentMat.baseTexture, zProj, cz);
+
+		// average them into one
+		float sum = n.x + n.y + n.z;
+		if (sum == 0.0f) sum = 1.0f;
+
+		for (int i = 0; i < 4; i++)
+		{
+			albedo[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
+		}
+		break;
+	}
+	case(PROJECT_LOCAL_TRIPLANER):
+	{
+		Vector3 n = (Vector3){ fabs(state.normal.x), fabs(state.normal.y), fabs(state.normal.z) };
+		Vector2 xProj = (Vector2){ state.localPosition.y, state.localPosition.z };
+		Vector2 yProj = (Vector2){ state.localPosition.x, state.localPosition.z };
+		Vector2 zProj = (Vector2){ state.localPosition.x, state.localPosition.y };
+
+		BYTE cx[4], cy[4], cz[4];
+		texture_sample(currentMat.baseTexture, xProj, cx);
+		texture_sample(currentMat.baseTexture, yProj, cy);
+		texture_sample(currentMat.baseTexture, zProj, cz);
+
+		// average them into one
+		float sum = n.x + n.y + n.z;
+		if (sum == 0.0f) sum = 1.0f;
+
+		for (int i = 0; i < 4; i++)
+		{
+			albedo[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
+		}
+		break;
+	}
+	case(PROJECT_SPHERICAL):
+	{
+		/* glsl sudocode:
+		vec3 p = normalize(position);
+		float u = atan(p.z, p.x) / (2.0 * PI) + 0.5;
+		float v = asin(p.y) / PI + 0.5;
+		vec2 uv = vec2(u, v);
+		vec4 color = texture(tex, uv * scale);
+		*/
+		Vector3 p_norm = vector3_normalize(state.position);
+		Vector2 uv = (Vector2){
+			atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
+			asinf(p_norm.y) / PI + 0.5f
+		};
+		texture_sample(currentMat.baseTexture, uv, albedo);
+
+		break;
+	}
+	case(PROJECT_LOCAL_SPHERICAL):
+	{
+		/* glsl sudocode:
+		vec3 p = normalize(position);
+		float u = atan(p.z, p.x) / (2.0 * PI) + 0.5;
+		float v = asin(p.y) / PI + 0.5;
+		vec2 uv = vec2(u, v);
+		vec4 color = texture(tex, uv * scale);
+		*/
+		Vector3 p_norm = vector3_normalize(state.localPosition);
+		Vector2 uv = (Vector2){
+			atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
+			asinf(p_norm.y) / PI + 0.5f
+		};
+		texture_sample(currentMat.baseTexture, uv, albedo);
+
+		break;
+	}
+	}
+}
 
 int raysShot = 0;
 
 void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Material* mats, int count, Ray ray, int depth)
 {
+	const double EPS = 1e-8;
+
 	// initialize color
 	RGBAout[0] = 0;
 	RGBAout[1] = 0;
 	RGBAout[2] = 0;
 	RGBAout[3] = 255;
+
+	BYTE albedo[4] = { 255,255,255,255 };
+	BYTE indirect_lighting[4] = { 255,255,255,255 };
+
+	BYTE skyCol[4] = {	200, 200, 230, 255 };
 
 	raysShot++;
 
@@ -169,123 +277,58 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 	// handle planes (not in bvh)
 	for (int i = 0; i < count; i++)
 	{
-
 		if (bodies[i].type != SHAPE_PLANE) continue;
 
 		RayHit planeHit  = intersectBody(bodies[i], i, ray);
 
 		if (planeHit.hit_id != NO_HIT && planeHit.dist < minDist)
 		{
-			minDist = dist;
+			//BYTE planeCol[4] = { 255, 255, 255, 255 };
+			//sample_mat(mats[matIDs[planeHit.hit_id]], state, planeCol);
+			//if(planeCol[3] > 127)
+			//{
+				minDist = dist;
 
-			state = planeHit;
-			mat_ptr = &mats[matIDs[planeHit.hit_id]];
+				state = planeHit;
+				mat_ptr = &mats[matIDs[planeHit.hit_id]];
+			//}
 		}
 	}
 
 	// ---texture mapping---
 	if (state.hit_id != NO_HIT)
 	{
-		Material currentMat = mats[matIDs[state.hit_id]];
+		sample_mat(*mat_ptr, state, albedo);
+	}
+	
+	char directly_lit = 0;
+	// ---direct lighting---
+	if (state.hit_id != NO_HIT)
+	{
 
-		// planar projection
-		switch (currentMat.projecton)
+		Vector3 ref_dir = (Vector3){ 0.4, -0.8, 0.4472135 };// sun direction (normalized)
+		Ray rayR;
+
+		Vector3 pos = vector3_add(state.position, vector3_scale(state.normal, EPS));
+		create_ray(&rayR, pos, ref_dir);
+
+		// trace the sun ray
+		RayHit dl = (RayHit){ .dist = 1e30, .hit_id = NO_HIT, .localPosition = (Vector3){0,0,0}, .position = (Vector3){0,0,0}, .normal = (Vector3){0,0,0} };
+		BVH_traverse(BVHroot, rayR, bodies, &dl);
+
+		// if we hit nothing apply the sky color
+		if (dl.hit_id == NO_HIT)
 		{
-			case(PROJECT_PLANER):
+			directly_lit = 1;
+			addativeColor(skyCol, indirect_lighting);
+		}
+		else
+		{
+			directly_lit = 0;
+			// set to black
+			for (int i = 0; i < 3; i++)
 			{
-				texture_sample(currentMat.baseTexture, (Vector2) { state.localPosition.x, -state.localPosition.z }, RGBAout);
-				break;
-			}
-			case(PROJECT_TRIPLANER):
-			{
-				/* glsl sudocode:
-				vec3 n = abs(normalize(normal));
-				vec3 xProj = position.yz;
-				vec3 yProj = position.xz;
-				vec3 zProj = position.xy;
-				vec4 xTex = texture(tex, xProj * scale);
-				vec4 yTex = texture(tex, yProj * scale);
-				vec4 zTex = texture(tex, zProj * scale);
-				vec4 color = (xTex * n.x + yTex * n.y + zTex * n.z) / (n.x + n.y + n.z);
-				*/
-
-				Vector3 n = (Vector3){ fabs(state.normal.x), fabs(state.normal.y), fabs(state.normal.z) };
-				Vector2 xProj = (Vector2){ state.position.y, state.position.z };
-				Vector2 yProj = (Vector2){ state.position.x, state.position.z };
-				Vector2 zProj = (Vector2){ state.position.x, state.position.y };
-
-				BYTE cx[4], cy[4], cz[4];
-				texture_sample(currentMat.baseTexture, xProj, cx);
-				texture_sample(currentMat.baseTexture, yProj, cy);
-				texture_sample(currentMat.baseTexture, zProj, cz);
-
-				// average them into one
-				float sum = n.x + n.y + n.z;
-				if (sum == 0.0f) sum = 1.0f;
-
-				for (int i = 0; i < 4; i++) 
-				{
-					RGBAout[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
-				}
-				break;
-			}
-			case(PROJECT_LOCAL_TRIPLANER):
-			{
-				Vector3 n = (Vector3){ fabs(state.normal.x), fabs(state.normal.y), fabs(state.normal.z) };
-				Vector2 xProj = (Vector2){ -state.localPosition.y, -state.localPosition.z };
-				Vector2 yProj = (Vector2){ state.localPosition.x, -state.localPosition.z };
-				Vector2 zProj = (Vector2){ state.localPosition.x, -state.localPosition.y };
-
-				BYTE cx[4], cy[4], cz[4];
-				texture_sample(currentMat.baseTexture, xProj, cx);
-				texture_sample(currentMat.baseTexture, yProj, cy);
-				texture_sample(currentMat.baseTexture, zProj, cz);
-
-				// average them into one
-				float sum = n.x + n.y + n.z;
-				if (sum == 0.0f) sum = 1.0f;
-
-				for (int i = 0; i < 4; i++)
-				{
-					RGBAout[i] = (BYTE)((cx[i] * n.x + cy[i] * n.y + cz[i] * n.z) / sum);
-				}
-				break;
-			}
-			case(PROJECT_SPHERICAL):
-			{
-				/* glsl sudocode:
-				vec3 p = normalize(position);
-				float u = atan(p.z, p.x) / (2.0 * PI) + 0.5;
-				float v = asin(p.y) / PI + 0.5;
-				vec2 uv = vec2(u, v);
-				vec4 color = texture(tex, uv * scale);
-				*/
-				Vector3 p_norm = vector3_normalize(state.position);
-				Vector2 uv = (Vector2){
-					atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
-					asinf(p_norm.y) / PI + 0.5f
-				};
-				texture_sample(currentMat.baseTexture, uv, RGBAout);
-
-				break;
-			}
-			case(PROJECT_LOCAL_SPHERICAL):
-			{
-				/* glsl sudocode:
-				vec3 p = normalize(position);
-				float u = atan(p.z, p.x) / (2.0 * PI) + 0.5;
-				float v = asin(p.y) / PI + 0.5;
-				vec2 uv = vec2(u, v);
-				vec4 color = texture(tex, uv * scale);
-				*/
-				Vector3 p_norm = vector3_normalize(state.localPosition);
-				Vector2 uv = (Vector2){
-					atan2f(p_norm.z, p_norm.x) / 2.0f * PI + 0.5f,
-					asinf(p_norm.y) / PI + 0.5f
-				};
-				texture_sample(currentMat.baseTexture, uv, RGBAout);
-
-				break;
+				indirect_lighting[i] = 0;
 			}
 		}
 	}
@@ -297,7 +340,6 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 		Vector3 ref_dir = vector3_reflect(ray.direction, state.normal);
 		Ray rayR;
 
-		double EPS = 1e-8;
 		Vector3 pos = vector3_add(state.position, vector3_scale(state.normal, EPS));
 		create_ray(&rayR, pos, ref_dir);
 
@@ -312,16 +354,65 @@ void raytrace(BYTE RGBAout[4], BVHNode* BVHroot, Body* bodies, short* matIDs, Ma
 		ref_color[2] *= mat_ptr->reflectivity;
 		ref_color[3] *= mat_ptr->reflectivity;
 
-		addativeColor(ref_color, RGBAout);
+		addativeColor(ref_color, albedo);
+		//multiplyColor(ref_color, indirect_lighting);
+	}
+	
+
+	// ---Global Illumination---
+	if (state.hit_id != NO_HIT && depth < MAX_RT_DEPTH && !directly_lit)
+	{
+		for (int i = 0; i < RTGI_SAMPLES; i++)
+		{
+			// TODO: add cosine distribution
+			//TODO: fix cubic distribution
+			Vector3 ray_dir = vector3_normalize(vector3_random());
+
+			// if the ray points into the surface flip it
+			// this gets us a half hemisphere
+			double dot = vector3_dot(ray_dir, state.normal);
+			if (dot < 0)
+			{
+				ray_dir = vector3_reflect(ray_dir, state.normal);
+			}
+
+			Vector3 pos = vector3_add(state.position, vector3_scale(state.normal, EPS));
+
+			Ray rayR;
+			create_ray(&rayR, pos, ray_dir);
+
+			BYTE ref_color[4];
+			raytrace(ref_color, BVHroot, bodies, matIDs, mats, count, rayR, MAX_RT_DEPTH); // only one bounce
+
+#if RTGI_SAMPLES > 0
+			multiplyColor((BYTE[4]){ 
+					RTGI_BRIGHTNESS / RTGI_SAMPLES, 
+					RTGI_BRIGHTNESS / RTGI_SAMPLES, 
+					RTGI_BRIGHTNESS / RTGI_SAMPLES, 
+					255},
+				ref_color);
+#endif // RTGI_SAMPLES > 0
+
+			addativeColor(ref_color, indirect_lighting);
+		}
 	}
 
-	// ambient sky light
+	// ---ambient sky light---
 	if (state.hit_id == NO_HIT)
 	{
-		RGBAout[0] = 200;
-		RGBAout[1] = 200;
-		RGBAout[2] = 230;
-		RGBAout[3] = 255;
+		for (int i = 0; i < 4; i++)
+		{
+			indirect_lighting[i] = skyCol[i];
+		}
+	}
+
+	// apply indirect lighting
+	multiplyColor(indirect_lighting, albedo);
+
+	// return the lighting
+	for (int i = 0; i < 4; i++)
+	{
+		RGBAout[i] = albedo[i];
 	}
 
 #if _DEBUG || _BENCHMARK
@@ -336,9 +427,10 @@ static void ray_bvh(BYTE RGBAout[4], BVHNode* node, Ray ray, int depth)
 		return;
 
 	double d;
-	if (ray_aabb(ray, node->bounds.min, node->bounds.max, 1e30, &d))
+	if (node->ids[0] != -1 &&  ray_aabb(ray, node->bounds.min, node->bounds.max, 1e30, &d))
 	{
-		BYTE color[4] = { max(255 - depth*10,0), 20, min(depth*10,255) ,240 };
+		//BYTE color[4] = { max(255 - depth*10,0), 20, min(depth*10,255), 240 };
+		BYTE color[4] = { 255, 20, 255, 252 };
 		overlayColor(color, RGBAout);
 	}
 
@@ -356,13 +448,16 @@ typedef struct {
 	Vector3 camera_pos;
 	Quaternion camera_angle;
 	int count;
-	int id;
 	double fov;
+	int id;
+	int rand_seed;
 } RaytraceGroupArgs;
 
 DWORD WINAPI raytraceWorker(LPVOID arg)
 {
 	RaytraceGroupArgs* args = (RaytraceGroupArgs*)arg;
+
+	srand(args->rand_seed);
 
 	int width = outputFrame.texture.width;
 	int height = outputFrame.texture.height;
@@ -400,12 +495,12 @@ DWORD WINAPI raytraceWorker(LPVOID arg)
 }
 
 
-int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
+int renderer_raytrace(BVHNode* BVHroot, Body* bodies, short* matIDs, Material* mats, int count, Vector3 cameraPos, Quaternion cameraAngle, double fov)
 {
 	rendertimeClock = clock();
 
 	//create bvh tree
-	BVHNode* BVHroot = BVH_createTree(bodies, count);
+	//BVHNode* BVHroot = BVH_createTree(bodies, count);
 
 	if (!BVH_validateTree(BVHroot)) return 0;
 
@@ -435,6 +530,7 @@ int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Ve
 		args->count = count;
 		args->fov = fov;
 
+		args->rand_seed = rand();
 		args->id = i;
 
 		threads[i] = CreateThread(
@@ -458,8 +554,6 @@ int renderer_raytrace(Body* bodies, short* matIDs, Material* mats, int count, Ve
 
 	// Clean up handles
 	for (int i = 0; i < NUM_THREADS; i++) CloseHandle(threads[i]);
-
-	BVH_freeTree(BVHroot);
 
 	return 1;
 }

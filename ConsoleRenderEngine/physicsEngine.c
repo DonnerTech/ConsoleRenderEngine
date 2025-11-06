@@ -248,6 +248,8 @@ Contact collide_box_plane(RigidBody* box, RigidBody* plane)
 	// Calculates the deepest point
 	Contact contact = { 0 };
 	contact.collided = false;
+
+	// distances are negative.
 	double minDistance = 0;
 
 	for (int i = 0; i < 8; i++)
@@ -257,7 +259,7 @@ Contact collide_box_plane(RigidBody* box, RigidBody* plane)
 			minDistance = distances[i];
 
 			contact.collided = true;
-			contact.contact_depth = -distances[i];
+			contact.contact_depth = -distances[i]; // we negate the distance to get the penetration depth
 			contact.contact_point = corners[i];
 			contact.normal = vector3_scale(plane->body.plane.normal, -1.0);
 		}
@@ -296,21 +298,70 @@ Contact collide_sphere_sphere(RigidBody* sphereA, RigidBody* sphereB)
 
 Contact collide_box_sphere(RigidBody* box, RigidBody* sphere)
 {
-	// Unimplemented
 	Contact contact = { 0 };
-	contact.collided = false;
+
+	//Transforms the sphere's pos into boxes local space
+	Quaternion invBoxRot = quat_conjugate(box->body.orientation);
+	Vector3 localSphereCenter = vector3_subtract(sphere->body.position, box->body.position);
+	localSphereCenter = quat_rotate_vector(invBoxRot, localSphereCenter);
+
+	Vector3 he = box->body.box.half_extents;
+
+	// Clamp sphere center to box surface to get closest point in box local space
+	Vector3 localNearest = localSphereCenter;
+
+	if (localNearest.x < -he.x) localNearest.x = -he.x;
+	if (localNearest.x > he.x) localNearest.x = he.x;
+
+	if (localNearest.y < -he.y) localNearest.y = -he.y;
+	if (localNearest.y > he.y) localNearest.y = he.y;
+
+	if (localNearest.z < -he.z) localNearest.z = -he.z;
+	if (localNearest.z > he.z) localNearest.z = he.z;
+
+
+	Vector3 localDiff = vector3_subtract(localSphereCenter, localNearest);
+	double sqrDist = vector3_dot(localDiff, localDiff);
+	double radius = sphere->body.sphere.radius;
+
+	// If outside, check collision
+	if (sqrDist > radius * radius)
+		return contact;  // no collision
+
+	contact.collided = true;
+
+	double dist = sqrt(sqrDist);
+	Vector3 localNormal;
+
+	if (dist > 1e-16)
+		localNormal = vector3_scale(localDiff, 1.0 / dist);
+	else
+		// TODO: choose axis of maximum penetration
+		localNormal = (Vector3){ 0, 1, 0 };
+
+
+	Vector3 worldNormal = quat_rotate_vector(box->body.orientation, localNormal);
+	Vector3 worldClosest = quat_rotate_vector(box->body.orientation, localNearest);
+	worldClosest = vector3_add(worldClosest, box->body.position);
+
+	contact.normal = worldNormal;
+	contact.contact_depth = radius - dist;
+
+	// Contact point is on the boxes surface (prob good enough)
+	contact.contact_point = vector3_add(
+		worldClosest,
+		vector3_scale(worldNormal, contact.contact_depth * 0.5)
+	);
 
 	return contact;
 }
 
-Contact collide_box_box(RigidBody* boxA, RigidBody* boxB /*, Contact* contacts*/)
+Contact collide_box_box(RigidBody* boxA, RigidBody* boxB)
 {
-	// Unimplemented
 	Contact contact = { 0 };
-	contact.collided = true;
-	contact.contact_point = (Vector3){ 0.0,0.0,0.0 };
+	contact.collided = false;
 
-	// Get local axes
+	// Get local axes in world space
 	Vector3 Aaxis[3] = {
 		quat_rotate_vector(boxA->body.orientation, (Vector3) { 1,0,0 }),
 		quat_rotate_vector(boxA->body.orientation, (Vector3) { 0,1,0 }),
@@ -322,15 +373,16 @@ Contact collide_box_box(RigidBody* boxA, RigidBody* boxB /*, Contact* contacts*/
 		quat_rotate_vector(boxB->body.orientation, (Vector3) { 0,0,1 })
 	};
 
-	Matrix3x3 R;
-	Matrix3x3 AbsR;
+	// Build rotation matrix
+	double R[3][3], AbsR[3][3];
+	const double EPS = 1e-8;
+	for (int i = 0; i < 3; ++i)
+		for (int j = 0; j < 3; ++j) {
+			R[i][j] = vector3_dot(Aaxis[i], Baxis[j]);
+			AbsR[i][j] = fabs(R[i][j]) + EPS;
+		}
 
-	// Rotation matrix from A to B
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
-			R.m[i][j] = vector3_dot(Aaxis[i], Baxis[j]);
-
-	// Compute translation of B relative to A (in A’s local coordinates)
+	// Compute translation from A to B in A’s local coordinates
 	Vector3 t_world = vector3_subtract(boxB->body.position, boxA->body.position);
 	double tA[3] = {
 		vector3_dot(t_world, Aaxis[0]),
@@ -338,289 +390,120 @@ Contact collide_box_box(RigidBody* boxA, RigidBody* boxB /*, Contact* contacts*/
 		vector3_dot(t_world, Aaxis[2])
 	};
 
-	// Compute AbsR with small epsilon to counter floating-point errors
-	const double EPS = 1e-8;
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
-			AbsR.m[i][j] = fabs(R.m[i][j]) + EPS;
+	Vector3 aExt = boxA->body.box.half_extents;
+	Vector3 bExt = boxB->body.box.half_extents;
 
-	double A[3] = {
-	boxA->body.box.half_extents.x,
-	boxA->body.box.half_extents.y,
-	boxA->body.box.half_extents.z
-	};
-
-
-	double B[3] = {
-	boxA->body.box.half_extents.x,
-	boxA->body.box.half_extents.y,
-	boxA->body.box.half_extents.z
-	};
+	double A[3] = { aExt.x, aExt.y, aExt.z };
+	double B[3] = { bExt.x, bExt.y, bExt.z };
 
 	double minPenetration = INFINITY;
-	Vector3 bestAxis = { 0 };  // world-space normal of the minimum penetration axis
+	Vector3 bestAxis = { 0 };
 
-	double ra, rb, proj, overlap;
+	// TODO: 
+	int bestCase = -1;
 
-	// Test axes L = A0, A1, A2
+	// Test face axes of A
 	for (int i = 0; i < 3; i++) {
-		ra = A[i];
-		rb = boxB->body.box.half_extents.x * AbsR.m[i][0] + boxB->body.box.half_extents.y * AbsR.m[i][1] + boxB->body.box.half_extents.z * AbsR.m[i][2];
-		proj = fabs(tA[i]);
-		if (proj > ra + rb) return contact;
+		double ra = A[i];
+		double rb = B[0] * AbsR[i][0] + B[1] * AbsR[i][1] + B[2] * AbsR[i][2];
+		double dist = fabs(tA[i]);
+		if (dist > ra + rb) return contact;
 
-		overlap = (ra + rb) - fabs(proj);
+		double overlap = (ra + rb) - dist;
 		if (overlap < minPenetration) {
 			minPenetration = overlap;
-			// store axis direction (normalized)
 			bestAxis = Aaxis[i];
-
-			// Ensure the axis points from A to B
 			if (vector3_dot(bestAxis, t_world) > 0)
 				bestAxis = vector3_scale(bestAxis, -1.0);
-
-			double planeOffset = vector3_dot(bestAxis, boxA->body.position);
-			Vector3 sum = { 0.0, 0.0, 0.0 };
-			int count = 1;
-
-			for (int x = -1; x <= 1; x += 2)
-			{
-				for (int y = -1; y <= 1; y += 2)
-				{
-					for (int z = -1; z <= 1; z += 2)
-					{
-						Vector3 corner = (Vector3){ A[0] * x, A[1] * y, A[2] * z };
-						corner = quat_rotate_vector(boxA->body.orientation, corner);
-
-						double dist = vector3_dot(bestAxis, corner) - planeOffset;
-
-						if (dist < 0)
-						{
-							//contacts[count] = (Contact){ true, bestAxis, minPenetration, vector3_add(boxA->body.position, corner) };
-							sum = vector3_add(sum, corner);
-							count++; 
-						}
-					}
-				}
-			}
-
-			contact.contact_point = vector3_add(boxA->body.position, vector3_scale(sum, 1.0 / count));
-			
+			bestCase = 0; // Face of A
 		}
 	}
 
-	// Test axes L = B0, B1, B2
+	// --- Test face axes of B ---
 	for (int j = 0; j < 3; j++) {
-		ra = boxA->body.box.half_extents.x * AbsR.m[0][j] + boxA->body.box.half_extents.y * AbsR.m[1][j] + boxA->body.box.half_extents.z * AbsR.m[2][j];
-		rb = B[j];
-		proj = fabs(tA[0] * R.m[0][j] + tA[1] * R.m[1][j] + tA[2] * R.m[2][j]);
-		if (proj > ra + rb) return contact;
+		double ra = A[0] * AbsR[0][j] + A[1] * AbsR[1][j] + A[2] * AbsR[2][j];
+		double rb = B[j];
+		double dist = fabs(tA[0] * R[0][j] + tA[1] * R[1][j] + tA[2] * R[2][j]);
+		if (dist > ra + rb) return contact;
 
-		overlap = (ra + rb) - fabs(proj);
+		double overlap = (ra + rb) - dist;
 		if (overlap < minPenetration) {
 			minPenetration = overlap;
-			// store axis direction (normalized)
 			bestAxis = Baxis[j];
-
-
-			// Ensure the axis points from A to B
 			if (vector3_dot(bestAxis, t_world) > 0)
 				bestAxis = vector3_scale(bestAxis, -1.0);
+			bestCase = 1; // Face of B
+		}
+	}
 
-			double planeOffset = vector3_dot(bestAxis, boxB->body.position);
-			Vector3 sum = { 0.0, 0.0, 0.0 };
-			int count = 1;
+	// edge–edge test (cross product )
+	// only major edges
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			Vector3 axis = vector3_cross(Aaxis[i], Baxis[j]);
+			if (vector3_magnitude(axis) < EPS) continue;
+			axis = vector3_normalize(axis);
 
-			for (int x = -1; x <= 1; x += 2)
-			{
-				for (int y = -1; y <= 1; y += 2)
-				{
-					for (int z = -1; z <= 1; z += 2)
-					{
-						Vector3 corner = (Vector3){ B[0] * x, B[1] * y, B[2] * z };
-						corner = quat_rotate_vector(boxB->body.orientation, corner);
+			double ra =
+				A[(i + 1) % 3] * fabs(vector3_dot(Aaxis[(i + 2) % 3], axis)) +
+				A[(i + 2) % 3] * fabs(vector3_dot(Aaxis[(i + 1) % 3], axis));
+			double rb =
+				B[(j + 1) % 3] * fabs(vector3_dot(Baxis[(j + 2) % 3], axis)) +
+				B[(j + 2) % 3] * fabs(vector3_dot(Baxis[(j + 1) % 3], axis));
 
-						double dist = vector3_dot(bestAxis, corner) - planeOffset;
+			double dist = fabs(vector3_dot(t_world, axis));
+			if (dist > ra + rb) return contact;
 
-						if (dist < 0)
-						{
-							sum = vector3_add(sum, corner);
-							count++;
-						}
-					}
-				}
+			double overlap = (ra + rb) - dist;
+			if (overlap < minPenetration) {
+				minPenetration = overlap;
+				bestAxis = axis;
+				if (vector3_dot(bestAxis, t_world) > 0)
+					bestAxis = vector3_scale(bestAxis, -1.0);
+				bestCase = 2; // Edge–edge
 			}
-
-			contact.contact_point = vector3_add(boxB->body.position, vector3_scale(sum, 1.0 / count));
 		}
 	}
 
-	Vector3 a = boxA->body.box.half_extents;
-	Vector3 b = boxB->body.box.half_extents;
-
-	bool isEdgeContact = false;
-	int bestAxisAIndex = 0;
-	int bestAxisBIndex = 0;
-
-	// Axis L = A0 x B0
-	ra = a.y * AbsR.m[2][0] + a.z * AbsR.m[1][0];
-	rb = b.y * AbsR.m[0][2] + b.z * AbsR.m[0][1];
-	proj = fabs(tA[2] * R.m[1][0] - tA[1] * R.m[2][0]);
-	if (proj > ra + rb) return contact;
-	overlap = (ra + rb) - fabs(proj);
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[0], Baxis[0]));  // store axis direction (normalized)
-		bestAxisAIndex = 0;
-		bestAxisBIndex = 0;
-		isEdgeContact = true;
-	}
-
-	// L = A0 x B1
-	ra = a.y * AbsR.m[2][1] + a.z * AbsR.m[1][1];
-	rb = b.x * AbsR.m[0][2] + b.z * AbsR.m[0][0];
-	if (fabs(tA[2] * R.m[1][1] - tA[1] * R.m[2][1]) > ra + rb) return contact;
-	overlap = (ra + rb) - fabs(proj);
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[0], Baxis[1]));  // store axis direction (normalized)
-		bestAxisAIndex = 0;
-		bestAxisBIndex = 1;
-		isEdgeContact = true;
-	}
-
-	// L = A0 x B2
-	ra = a.y * AbsR.m[2][2] + a.z * AbsR.m[1][2];
-	rb = b.x * AbsR.m[0][1] + b.y * AbsR.m[0][0];
-	if (fabs(tA[2] * R.m[1][2] - tA[1] * R.m[2][2]) > ra + rb) return contact;
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[0], Baxis[2]));  // store axis direction (normalized)
-		bestAxisAIndex = 0;
-		bestAxisBIndex = 2;
-		isEdgeContact = true;
-	}
-
-	// L = A1 x B0
-	ra = a.x * AbsR.m[2][0] + a.z * AbsR.m[0][0];
-	rb = b.y * AbsR.m[1][2] + b.z * AbsR.m[1][1];
-	if (fabs(tA[0] * R.m[2][0] - tA[2] * R.m[0][0]) > ra + rb) return contact;
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[1], Baxis[0]));  // store axis direction (normalized)
-		bestAxisAIndex = 1;
-		bestAxisBIndex = 0;
-		isEdgeContact = true;
-	}
-
-	// L = A1 x B1
-	ra = a.x * AbsR.m[2][1] + a.z * AbsR.m[0][1];
-	rb = b.x * AbsR.m[1][2] + b.z * AbsR.m[1][0];
-	if (fabs(tA[0] * R.m[2][1] - tA[2] * R.m[0][1]) > ra + rb) return contact;
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[1], Baxis[1]));  // store axis direction (normalized)
-		bestAxisAIndex = 1;
-		bestAxisBIndex = 1;
-		isEdgeContact = true;
-	}
-
-	// L = A1 x B2
-	ra = a.x * AbsR.m[2][2] + a.z * AbsR.m[0][2];
-	rb = b.x * AbsR.m[1][1] + b.y * AbsR.m[1][0];
-	if (fabs(tA[0] * R.m[2][2] - tA[2] * R.m[0][2]) > ra + rb) return contact;
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[1], Baxis[2]));  // store axis direction (normalized)
-		bestAxisAIndex = 1;
-		bestAxisBIndex = 2;
-		isEdgeContact = true;
-	}
-
-	// L = A2 x B0
-	ra = a.x * AbsR.m[1][0] + a.y * AbsR.m[0][0];
-	rb = b.y * AbsR.m[2][2] + b.z * AbsR.m[2][1];
-	if (fabs(tA[1] * R.m[0][0] - tA[0] * R.m[1][0]) > ra + rb) return contact;
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[2], Baxis[0]));  // store axis direction (normalized)
-		bestAxisAIndex = 2;
-		bestAxisBIndex = 0;
-		isEdgeContact = true;
-	}
-
-	// L = A2 x B1
-	ra = a.x * AbsR.m[1][1] + a.y * AbsR.m[0][1];
-	rb = b.x * AbsR.m[2][2] + b.z * AbsR.m[2][0];
-	if (fabs(tA[1] * R.m[0][1] - tA[0] * R.m[1][1]) > ra + rb) return contact;
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[2], Baxis[1]));  // store axis direction (normalized)
-		bestAxisAIndex = 2;
-		bestAxisBIndex = 1;
-		isEdgeContact = true;
-	}
-
-	// L = A2 x B2
-	ra = a.x * AbsR.m[1][2] + a.y * AbsR.m[0][2];
-	rb = b.x * AbsR.m[2][1] + b.y * AbsR.m[2][0];
-	if (fabs(tA[1] * R.m[0][2] - tA[0] * R.m[1][2]) > ra + rb) return contact;
-	if (overlap < minPenetration) {
-		minPenetration = overlap;
-		bestAxis = vector3_normalize(vector3_cross(Aaxis[2], Baxis[2]));  // store axis direction (normalized)
-		bestAxisAIndex = 2;
-		bestAxisBIndex = 2;
-		isEdgeContact = true;
-	}
-
-	if (isEdgeContact)
-	{
-		Vector3 aDir = Aaxis[bestAxisAIndex];
-		Vector3 bDir = Baxis[bestAxisBIndex];
-
-
-		Vector3 aCenter = boxA->body.position;
-		for (int k = 0; k < 3; ++k) {
-			double sign = (vector3_dot(Aaxis[k], bestAxis) > 0) ? 1.0 : -1.0;
-			if (k != bestAxisAIndex)
-				aCenter = vector3_add(aCenter, vector3_scale(Aaxis[k], sign * A[k]));
-		}
-
-		Vector3 bCenter = boxA->body.position;
-		for (int k = 0; k < 3; ++k) {
-			double sign = (vector3_dot(Baxis[k], bestAxis) > 0) ? 1.0 : -1.0;
-			if (k != bestAxisBIndex)
-				bCenter = vector3_add(bCenter, vector3_scale(Baxis[k], sign * B[k]));
-		}
-
-		Vector3 r = vector3_subtract(aCenter, bCenter);
-		double aDotA = vector3_dot(aDir, aDir);
-		double bDotB = vector3_dot(bDir, bDir);
-		double aDotB = vector3_dot(aDir, bDir);
-		double aDotR = vector3_dot(aDir, r);
-		double bDotR = vector3_dot(bDir, r);
-
-		double denom = aDotA * bDotB - aDotB * aDotB;
-		double s = (aDotB * bDotR - bDotB * aDotR) / denom;
-		double t = (aDotA * bDotR - aDotB * aDotR) / denom;
-
-		Vector3 pA = vector3_add(aCenter, vector3_scale(aDir, s));
-		Vector3 pB = vector3_add(bCenter, vector3_scale(bDir, t));
-		contact.contact_point = vector3_scale(vector3_add(pA, pB), 0.5);
-	}
-
-	if (vector3_dot(bestAxis, t_world) > 0)
-		bestAxis = vector3_scale(bestAxis, -1.0);
-
+	// If we got here, they intersect
+	contact.collided = true;
 	contact.normal = bestAxis;
 	contact.contact_depth = minPenetration;
-	
-	// this is a rough estimate of the contact point
-	if(vector3_magnitude(contact.contact_point) < 1e-16)
-		contact.contact_point = vector3_scale(vector3_add(boxA->body.position, boxB->body.position), 0.5);
 
-	// If we got this far — no separating axis found
+
+	// Compute terrible contact point
+	// TODO: replace with maniforld collisions
+	contact.contact_point = vector3_scale(
+		vector3_add(boxA->body.position, boxB->body.position), 0.5
+	);
+
 	return contact;
+}
+
+void broadphase_collision_test(BVHNode* node, Bounds rb_bounds, int overlap_ids[], int* idx)
+{
+	if (node == NULL)
+		return;
+
+	if (BVH_boundsIntersect(node->bounds, rb_bounds))
+	{
+		if (node->ids[0] != -1)
+		{
+			for (int i = 0; i < IDS_MAX; i++)
+			{
+				if (node->ids[i] == -1)
+					break;
+
+				overlap_ids[(*idx)++] = node->ids[i];
+			}
+		}
+		else
+		{
+			broadphase_collision_test(node->left_ptr, rb_bounds, overlap_ids, idx);
+
+			broadphase_collision_test(node->right_ptr, rb_bounds, overlap_ids, idx);
+		}
+	}
 }
 
 void resolve_contact(RigidBody* a, RigidBody* b, Contact contact, double restitution, double friction)
@@ -707,7 +590,7 @@ void physicsWorld_Init(PhysicsWorld* physicsWorld, Vector3 gravity)
 
 void physicsWorld_AddBody(PhysicsWorld* physicsWorld, RigidBody rigidbody)
 {
-	if (physicsWorld->body_count >= MAX_BODIES)
+	if (physicsWorld->body_count >= MAX_RIGIDBODIES)
 	{
 		return -1;
 	}
@@ -721,7 +604,9 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 
 	for (int i = 0; i < physicsWorld->body_count; i++)
 	{
-		physicsWorld->bodies[i] = physicsWorld->rigidbodies[i].body; // update body pointers for rendering
+		// TODO: For the love of... I need to do this better. make rigidbodies have pointers to the body list
+		// something, anything else...
+		physicsWorld->bodies[i] = physicsWorld->rigidbodies[i].body; // update bodies for rendering
 	}
 
 	for (int i = 0; i < physicsWorld->body_count; i++)
@@ -734,28 +619,84 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 		integrate(&physicsWorld->rigidbodies[i], dt);
 	}
 
+	int haveIntersected[MAX_RIGIDBODIES] = { 0 };
+
 	// Collision detection and resolution
 	for (int i = 0; i < physicsWorld->body_count; i++)
 	{
-		for (int j = i + 1; j < physicsWorld->body_count; j++)
+
+		haveIntersected[i] = 1;
+
+		// handle planes
+		if (physicsWorld->rigidbodies[i].body.type == SHAPE_PLANE)
 		{
+			for (int j = 0; j < physicsWorld->body_count; j++)
+			{
+				if (i == j)
+					continue;
+
+				Contact contact;
+				contact.collided = false;
+
+				switch (physicsWorld->rigidbodies[j].body.type)
+				{
+				case SHAPE_SPHERE:
+					contact = collide_sphere_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
+					//contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
+					break;
+				case SHAPE_BOX:
+					contact = collide_box_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
+					//contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
+					break;
+				case SHAPE_PLANE:
+					// Plane-plane collision is not defined
+					break;
+				}
+
+				if (contact.collided)
+				{
+					double average_restitution = (physicsWorld->rigidbodies[i].restitution * physicsWorld->rigidbodies[j].restitution) / 2.0;
+					double average_friction = (physicsWorld->rigidbodies[i].friction * physicsWorld->rigidbodies[j].friction) / 2.0;
+					resolve_contact(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j], contact, average_restitution, average_friction);
+				}
+			}
+
+			continue;
+		}
+
+		// handle bvh
+		int ids[MAX_RIGIDBODIES] = { 0 }; // or malloc for (physicsWorld->body_count)
+		int count = 0;
+		broadphase_collision_test(physicsWorld->bvh_ptr, BVH_calculateBounds(physicsWorld->rigidbodies[i].body), ids, &count);
+
+		for (int j = 0; j < count; j++)
+		{
+			if (ids[j] == -1)
+				break;
+
+			if (i == ids[j])
+				continue;
+
+			if (haveIntersected[ids[j]])
+				continue;
+
 			Contact contact;
 			contact.collided = false;
 			switch (physicsWorld->rigidbodies[i].body.type)
 			{
 				case SHAPE_SPHERE:
 				{
-					switch (physicsWorld->rigidbodies[j].body.type)
+					switch (physicsWorld->rigidbodies[ids[j]].body.type)
 					{
 						case SHAPE_SPHERE:
-							contact = collide_sphere_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
+							contact = collide_sphere_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							break;
 						case SHAPE_BOX:
-							contact = collide_box_sphere(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
-							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
+							contact = collide_box_sphere(&physicsWorld->rigidbodies[ids[j]], &physicsWorld->rigidbodies[i]);
+							//contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
 							break;
 						case SHAPE_PLANE:
-							contact = collide_sphere_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
+							contact = collide_sphere_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							contact.normal = vector3_scale(contact.normal, -1.0);
 							break;
 					}
@@ -763,35 +704,18 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 				}
 				case SHAPE_BOX:
 				{
-					switch (physicsWorld->rigidbodies[j].body.type)
+					switch (physicsWorld->rigidbodies[ids[j]].body.type)
 					{
 						case SHAPE_SPHERE:
-							contact = collide_box_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
-							break;
-						case SHAPE_BOX:
-							contact = collide_box_box(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
-							break;
-						case SHAPE_PLANE:
-							contact = collide_box_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j]);
-							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
-							break;
-					}
-					break;
-				}
-				case SHAPE_PLANE:
-				{
-					switch (physicsWorld->rigidbodies[j].body.type)
-					{
-						case SHAPE_SPHERE:
-							contact = collide_sphere_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
+							contact = collide_box_sphere(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
 							break;
 						case SHAPE_BOX:
-							contact = collide_box_plane(&physicsWorld->rigidbodies[j], &physicsWorld->rigidbodies[i]);
-							//contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
+							contact = collide_box_box(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
 							break;
 						case SHAPE_PLANE:
-							// Plane-plane collision is not defined
+							contact = collide_box_plane(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]]);
+							contact.normal = vector3_scale(contact.normal, -1.0); // invert normal to point out of A
 							break;
 					}
 					break;
@@ -800,9 +724,9 @@ void physicsWorld_Update(PhysicsWorld* physicsWorld, double dt)
 
 			if (contact.collided)
 			{
-				double average_restitution = (physicsWorld->rigidbodies[i].restitution * physicsWorld->rigidbodies[j].restitution ) / 2.0;
-				double average_friction = (physicsWorld->rigidbodies[i].friction * physicsWorld->rigidbodies[j].friction) / 2.0;
-				resolve_contact(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[j], contact, average_restitution, average_friction);
+				double average_restitution = (physicsWorld->rigidbodies[i].restitution * physicsWorld->rigidbodies[ids[j]].restitution ) / 2.0;
+				double average_friction = (physicsWorld->rigidbodies[i].friction * physicsWorld->rigidbodies[ids[j]].friction) / 2.0;
+				resolve_contact(&physicsWorld->rigidbodies[i], &physicsWorld->rigidbodies[ids[j]], contact, average_restitution, average_friction);
 			}
 		}
 	}

@@ -8,6 +8,8 @@
 
 void testRaySphere(int iter);
 
+void testRayAABB(int iter);
+
 void testRayBox(int iter);
 
 void testRayPlane(int iter);
